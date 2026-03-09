@@ -1,0 +1,51 @@
+from typing import Optional
+from pydantic import BaseModel, EmailStr, field_validator
+import re
+
+
+class UserRegisterRequest(BaseModel):
+    full_name: str
+    phone_number: str
+    email: Optional[EmailStr] = None
+    password: str
+    cnic: str                           # Plain CNIC – encrypted on save, never stored raw
+    partner_id: Optional[int] = None
+    preferred_language: Optional[str] = "ur"
+
+    @field_validator("cnic")
+    @classmethod
+    def validate_cnic(cls, v: str) -> str:
+        cleaned = v.replace("-", "")
+        if not re.fullmatch(r"\d{13}", cleaned):
+            raise ValueError("CNIC must be 13 digits (with or without dashes)")
+        return cleaned
+
+    @field_validator("phone_number")
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        if not re.fullmatch(r"(\+92|0)?3\d{9}", v):
+            raise ValueError("Phone number must be a valid Pakistani mobile number")
+        return v
+
+
+class UserLoginRequest(BaseModel):
+    phone_number: str
+    password: str
+
+
+class UserResponse(BaseModel):
+    id: int
+    full_name: str
+    phone_number: str
+    email: Optional[str] = None
+    account_number: Optional[str] = None
+    preferred_language: str
+    is_active: bool
+
+    model_config = {"from_attributes": True}
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
