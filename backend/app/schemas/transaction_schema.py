@@ -2,6 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 from pydantic import BaseModel
+from uuid import UUID
 
 
 class TransferRequest(BaseModel):
@@ -12,7 +13,7 @@ class TransferRequest(BaseModel):
 
 class TransactionResponse(BaseModel):
     id: int
-    sender_id: int
+    sender_id: UUID
     recipient_account: str
     recipient_name: Optional[str]
     amount: Decimal

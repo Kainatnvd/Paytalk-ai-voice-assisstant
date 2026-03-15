@@ -40,6 +40,7 @@ class User(Base):
     email = Column(String(255), nullable=True)
     cnic_hash = Column(String(64), nullable=True)
     cnic_encrypted = Column(LargeBinary, nullable=True)
+    password_hash = Column(String(255), nullable=True)
     preferred_language = Column(String(10), default="ur")
     is_active = Column(Boolean, default=True)
     failed_auth_count = Column(SmallInteger, default=0)

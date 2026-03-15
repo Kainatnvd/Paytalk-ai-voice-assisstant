@@ -41,7 +41,7 @@ def create_sdk_key(
         partner_id=payload.partner_id,
         api_key=api_key,
         label=payload.label,
-        created_by=current_user.id,
+        created_by=current_user.user_id,
     )
     db.add(record)
     db.commit()

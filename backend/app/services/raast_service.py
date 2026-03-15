@@ -3,6 +3,7 @@ Raast payment service: integrates with SBP Raast sandbox.
 Includes idempotency, daily limit enforcement, and full logging.
 """
 import json
+import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
@@ -11,7 +12,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from backend.app.models.daily_txn_summaries import DailyTxnSummary
+from app.models.daily_txn_summaries import DailyTxnSummary
 from app.models.partner import Partner
 from app.models.system_log import SystemLog
 from app.models.transaction import Transaction, TransactionStatus
@@ -29,7 +30,7 @@ def _log(db: Session, action: str, user_id: int, details: dict, level: str = "IN
     ))
 
 
-def _check_idempotency(db: Session, sender_id: int, recipient_account: str, amount: Decimal) -> bool:
+def _check_idempotency(db: Session, sender_id: uuid.UUID, recipient_account: str, amount: Decimal) -> bool:
     """Return True if an identical transaction was submitted in the last 60 seconds."""
     cutoff = datetime.now(timezone.utc) - timedelta(seconds=IDEMPOTENCY_WINDOW_SECONDS)
     duplicate = (
@@ -46,9 +47,9 @@ def _check_idempotency(db: Session, sender_id: int, recipient_account: str, amou
     return duplicate is not None
 
 
-def _check_daily_limit(db: Session, user_id: int, partner_id: int, amount: Decimal) -> dict:
+def _check_daily_limit(db: Session, user_id: uuid.UUID, partner_id: uuid.UUID, amount: Decimal) -> dict:
     """Return {"ok": True} or {"ok": False, "reason": str}."""
-    partner = db.query(Partner).filter(Partner.id == partner_id).first()
+    partner = db.query(Partner).filter(Partner.partner_id == partner_id).first()
     if not partner:
         return {"ok": False, "reason": "Partner not found"}
 
@@ -72,7 +73,7 @@ def _check_daily_limit(db: Session, user_id: int, partner_id: int, amount: Decim
     return {"ok": True}
 
 
-def _update_daily_summary(db: Session, user_id: int, partner_id: int, amount: Decimal):
+def _update_daily_summary(db: Session, user_id: uuid.UUID, partner_id: uuid.UUID, amount: Decimal):
     today = datetime.now(timezone.utc).date()
     summary = (
         db.query(DailyTxnSummary)
@@ -98,11 +99,11 @@ def _update_daily_summary(db: Session, user_id: int, partner_id: int, amount: De
 
 def initiate_transfer(
     db: Session,
-    sender_id: int,
+    sender_id: uuid.UUID,
     recipient_account: str,
     recipient_name: str,
     amount: Decimal,
-    partner_id: int,
+    partner_id: uuid.UUID,
 ) -> Transaction:
     """
     Execute a Raast transfer. Handles idempotency, daily limits,

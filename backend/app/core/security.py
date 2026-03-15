@@ -1,6 +1,7 @@
 import hashlib
 import secrets
-from datetime import datetime, timedelta
+import uuid
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -37,7 +38,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     expire = datetime.utcnow() + (
         expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    jti = secrets.token_hex(16)   # unique token ID for revocation (NFR-016)
+    jti = secrets.token_hex(16)
     to_encode.update({"exp": expire, "jti": jti})
     token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return token, jti
@@ -63,7 +64,7 @@ def hash_cnic(cnic: str) -> str:
 
 def _get_aes_key() -> bytes:
     key = settings.AES_ENCRYPTION_KEY.encode()
-    return key[:32].ljust(32, b"\x00")  # Ensure exactly 32 bytes
+    return key[:32].ljust(32, b"\x00")
 
 
 def encrypt_cnic(cnic: str) -> bytes:
@@ -101,8 +102,6 @@ def validate_sdk_key(db: Session, api_key: str):
     ).first()
     if not record:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid SDK API key")
-    # Update last_used_at
-    from datetime import datetime, timezone
     record.last_used_at = datetime.now(timezone.utc)
     db.commit()
     return record.partner_id
@@ -119,11 +118,17 @@ def get_current_user(
 
     token = credentials.credentials
     payload = decode_access_token(token)
-    user_id: int = payload.get("sub")
-    if user_id is None:
+
+    user_id_str = payload.get("sub")
+    if user_id_str is None:
         raise HTTPException(status_code=401, detail="Invalid token payload")
 
-    # Also verify session is still active
+    try:
+        user_id = uuid.UUID(user_id_str)   # convert string back to UUID
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    # Verify session is still active
     session = (
         db.query(AuthSession)
         .filter(AuthSession.user_id == user_id, AuthSession.is_active == True)
@@ -133,7 +138,7 @@ def get_current_user(
     if not session:
         raise HTTPException(status_code=401, detail="Session expired or logged out")
 
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.user_id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user

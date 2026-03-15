@@ -1,4 +1,5 @@
 """Auth routes: /auth/*"""
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -35,7 +36,6 @@ def register(payload: UserRegisterRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=409, detail="CNIC already registered")
 
     user = User(
-        full_name=payload.full_name,
         phone_number=payload.phone_number,
         email=payload.email,
         password_hash=hash_password(payload.password),
@@ -64,16 +64,16 @@ def login(payload: UserLoginRequest, request: Request, db: Session = Depends(get
     if user.locked_until and datetime.now(timezone.utc) < user.locked_until:
         raise HTTPException(status_code=423, detail=f"Account locked until {user.locked_until}")
 
-    token, jti = create_access_token({"sub": user.id})   # unpack tuple (token, jti)
+    token, jti = create_access_token({"sub": str(user.user_id)})  # UUID must be str in JWT
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
     session = AuthSession(
-        user_id=user.id,
+        user_id=user.user_id,
         session_token=token,
         jwt_jti=jti,
         device_id=request.headers.get("X-Device-Id"),
         ip_address=request.client.host,
-        auth_method="otp",   # default login method; NFC flow sets this to 'nfc_otp'
+        auth_method="otp",
         expires_at=expires_at,
     )
     db.add(session)
@@ -85,7 +85,7 @@ def login(payload: UserLoginRequest, request: Request, db: Session = Depends(get
 @router.post("/otp/send", response_model=OtpResponse)
 def send_otp(payload: OtpSendRequest, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     """Generate and SMS an OTP to the user's phone number."""
-    otp_service.send_otp(db, current_user.id, payload.phone_number)
+    otp_service.send_otp(db, current_user.user_id, payload.phone_number)
     return OtpResponse(message="OTP sent successfully", expires_in_seconds=60)
 
 
@@ -124,7 +124,7 @@ def logout(current_user=Depends(get_current_user), db: Session = Depends(get_db)
     """Deactivate the current session."""
     session = (
         db.query(AuthSession)
-        .filter(AuthSession.user_id == current_user.id, AuthSession.is_active == True)
+        .filter(AuthSession.user_id == current_user.user_id, AuthSession.is_active == True)
         .order_by(AuthSession.created_at.desc())
         .first()
     )

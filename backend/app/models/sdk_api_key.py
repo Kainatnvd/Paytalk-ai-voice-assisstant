@@ -8,7 +8,7 @@ class SdkApiKey(Base):
     __tablename__ = "sdk_api_keys"
 
     id = Column(Integer, primary_key=True, index=True)
-    partner_id = Column(Integer, ForeignKey("partners.id"), nullable=False, index=True)
+    partner_id = Column(UUID(as_uuid=True), ForeignKey("partners.partner_id"), nullable=False, index=True)
     key_prefix = Column(String(12), nullable=False)         # e.g. 'pt_live_abc1' — shown in admin UI
     key_hash = Column(String(64), unique=True, nullable=False, index=True)  # SHA-256, never store raw
     label = Column(String(200), nullable=True)

@@ -5,24 +5,24 @@ from typing import List, Optional
 from rapidfuzz import process, fuzz
 from sqlalchemy.orm import Session
 
-from app.models.beneficiary import Beneficiary
+from app.models.contacts import Contact
 
 MATCH_THRESHOLD = 75  # minimum similarity score (0-100)
 
 
-def get_user_contacts(db: Session, user_id: int) -> List[Beneficiary]:
+def get_user_contacts(db: Session, user_id: int) -> List[Contact]:
     """Fetch all saved beneficiaries for a user."""
-    return db.query(Beneficiary).filter(Beneficiary.user_id == user_id).all()
+    return db.query(Contact).filter(Contact.user_id == user_id).all()
 
 
-def match_contact(query_name: str, contacts: List[Beneficiary]) -> dict:
+def match_contact(query_name: str, contacts: List[Contact]) -> dict:
     """
-    Fuzzy-match a spoken name against the user's beneficiary list.
+    Fuzzy-match a spoken name against the user's Contactlist.
 
     Returns:
         {
             "matched": bool,
-            "contact": Beneficiary | None,
+            "contact": Contact| None,
             "confidence": float,
             "candidates": list   # top 3 if confidence < threshold
         }

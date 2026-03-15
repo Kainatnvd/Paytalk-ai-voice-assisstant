@@ -60,7 +60,7 @@ async def process_voice(
     # ── 4. Fetch current session ──────────────────────────────────────────────
     session = (
         db.query(AuthSession)
-        .filter(AuthSession.user_id == current_user.id, AuthSession.is_active == True)
+        .filter(AuthSession.user_id == current_user.user_id, AuthSession.is_active == True)
         .order_by(AuthSession.created_at.desc())
         .first()
     )
@@ -79,13 +79,13 @@ async def process_voice(
         # User is expected to speak the OTP
         otp_code = transcription.strip().replace(" ", "")
         pending = dialogue["pending_action"] or {}
-        otp_result = otp_service.verify_otp(db, current_user.id, otp_code)
+        otp_result = otp_service.verify_otp(db, current_user.user_id, otp_code)
         if otp_result["success"]:
             dialogue_service.set_state(db, session_id, "EXECUTING", pending)
             try:
                 txn = raast_service.initiate_transfer(
                     db=db,
-                    sender_id=current_user.id,
+                    sender_id=current_user.user_id,
                     recipient_account=pending["recipient_account"],
                     recipient_name=pending["recipient_name"],
                     amount=Decimal(str(pending["amount"])),
@@ -102,7 +102,7 @@ async def process_voice(
     elif state == "AWAITING_CONFIRMATION":
         if intent == "confirm":
             pending = dialogue["pending_action"] or {}
-            otp_service.send_otp(db, current_user.id, current_user.phone_number)
+            otp_service.send_otp(db, current_user.user_id, current_user.phone_number)
             dialogue_service.set_state(db, session_id, "AWAITING_OTP", pending)
             response_text = tmpl.otp_sent(lang)
         else:
@@ -126,7 +126,7 @@ async def process_voice(
         if not recipient_query or not amount:
             response_text = "Pleae batayein: kise aur kitne rupay bhejna hai?" if lang == "ur" else "Please specify recipient and amount."
         else:
-            match_result = contact_service.find_contact_for_user(db, current_user.id, recipient_query)
+            match_result = contact_service.find_contact_for_user(db, current_user.user_id, recipient_query)
             if match_result["matched"]:
                 contact = match_result["contact"]
                 pending = {
@@ -148,7 +148,7 @@ async def process_voice(
     # ── 7. Log to voice_commands ──────────────────────────────────────────────
     elapsed_ms = int((time.perf_counter() - start_ms) * 1000)
     db.add(VoiceCommand(
-        user_id=current_user.id,
+        user_id=current_user.user_id,
         session_id=session_id,
         audio_duration_seconds=stt_result.get("duration_seconds"),
         transcribed_text=transcription,
