@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes import auth, account, transaction, voice, admin
-from app.services.stt_service import get_model   # pre-load Whisper at startup
+# from app.services.stt_service import get_model   # pre-load Whisper at startup
 
 app = FastAPI(
     title="PayTalk API",
@@ -37,7 +37,7 @@ app.include_router(admin.router)
 @app.on_event("startup")
 async def startup_event():
     print("[PayTalk] Starting up – pre-loading Whisper model...")
-    get_model()
+    # get_model()
     print("[PayTalk] Ready.")
 
 

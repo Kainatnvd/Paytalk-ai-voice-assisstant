@@ -17,7 +17,7 @@ def get_user_contacts(db: Session, user_id: int) -> List[Beneficiary]:
 
 def match_contact(query_name: str, contacts: List[Beneficiary]) -> dict:
     """
-    Fuzzy-match a spoken name against the user's contact list.
+    Fuzzy-match a spoken name against the user's beneficiary list.
 
     Returns:
         {
