@@ -1,3 +1,4 @@
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, func
 
 from app.database.base import Base
@@ -12,7 +13,7 @@ class SdkApiKey(Base):
     key_hash = Column(String(64), unique=True, nullable=False, index=True)  # SHA-256, never store raw
     label = Column(String(200), nullable=True)
     is_active = Column(Boolean, default=True)
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=True)
     last_used_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     expires_at = Column(DateTime(timezone=True), nullable=True)

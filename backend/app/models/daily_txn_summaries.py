@@ -1,3 +1,4 @@
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, Numeric, func
 
 from app.database.base import Base
@@ -8,7 +9,7 @@ class DailyTxnSummary(Base):
     __tablename__ = "daily_txn_summaries"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False, index=True)
     partner_id = Column(Integer, ForeignKey("partners.id"), nullable=False)
     txn_date = Column(Date, nullable=False)
     total_amount = Column(Numeric(15, 2), default=0.00)

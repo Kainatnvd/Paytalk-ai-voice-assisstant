@@ -1,3 +1,4 @@
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, func
 
 from app.database.base import Base
@@ -23,7 +24,7 @@ class UserDevice(Base):
     __tablename__ = "user_devices"
 
     id                 = Column(Integer, primary_key=True, index=True)
-    user_id            = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id            = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False, index=True)
     device_fingerprint = Column(String(512), nullable=False)  # Hashed OS + hardware identifiers
     platform           = Column(String(20),  nullable=False)  # 'android', 'ios', 'web'
     os_version         = Column(String(50),  nullable=True)   # e.g. "Android 13", "iOS 17"

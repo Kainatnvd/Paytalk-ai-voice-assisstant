@@ -1,3 +1,5 @@
+import uuid
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, func
 
 from app.database.base import Base
@@ -6,8 +8,8 @@ from app.database.base import Base
 class AuthSession(Base):
     __tablename__ = "auth_sessions"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False, index=True)
     session_token = Column(String(512), nullable=False, unique=True)
     jwt_jti = Column(String(128), unique=True, nullable=True, index=True)  # NFR-016: JWT revocation
     device_id = Column(String(255), nullable=True)

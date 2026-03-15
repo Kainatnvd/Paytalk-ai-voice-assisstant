@@ -4,7 +4,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str = "postgresql://user:password@localhost:5432/paytalk_db"
+    DATABASE_URL: str = "postgresql://postgres:1122@localhost:5432/PayTalk_dbss"
 
     # JWT
     SECRET_KEY: str = "change_this_to_a_64_char_hex_string"

@@ -11,7 +11,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models.daily_txn_summary import DailyTxnSummary
+from backend.app.models.daily_txn_summaries import DailyTxnSummary
 from app.models.partner import Partner
 from app.models.system_log import SystemLog
 from app.models.transaction import Transaction, TransactionStatus
