@@ -31,7 +31,7 @@ def generate_otp() -> str:
     return str(secrets.randbelow(900000) + 100000)   # always 6 digits
 
 
-def send_otp(db: Session, user_id: int, phone_number: str) -> OtpRequest:
+def send_otp(db: Session, user_id: int, phone_number: str, purpose: str = "login") -> OtpRequest:
     """Generate OTP, persist to DB, send via Twilio SMS."""
     otp_code = generate_otp()
     otp_hash = hashlib.sha256(otp_code.encode()).hexdigest()   # never store plaintext
@@ -41,8 +41,9 @@ def send_otp(db: Session, user_id: int, phone_number: str) -> OtpRequest:
         user_id=user_id,
         otp_hash=otp_hash,
         phone_number=phone_number,
+        purpose=purpose,          # add this line
         expires_at=expires_at,
-    )
+)
     db.add(record)
     db.commit()
     db.refresh(record)
