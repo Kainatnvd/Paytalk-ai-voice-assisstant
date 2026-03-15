@@ -5,7 +5,7 @@ from app.database.base import Base
 
 class DailyTxnSummary(Base):
     """Tracks total daily spend per user for limit enforcement."""
-    __tablename__ = "summary"
+    __tablename__ = "daily_txn_summaries"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
