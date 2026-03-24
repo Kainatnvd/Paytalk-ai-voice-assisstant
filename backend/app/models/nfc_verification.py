@@ -27,5 +27,5 @@ class NfcVerification(Base):
     verification_status = Column(String(20), nullable=False, default="failed")
     # valid: success | failed | chip_error | timeout | unsupported
     failure_reason      = Column(Text, nullable=True)                # NULL when status = success
-    session_id = Column(UUID(as_uuid=True), ForeignKey("auth_sessions.id"), nullable=True)
+    session_id          = Column(UUID(as_uuid=True), ForeignKey("auth_sessions.id"), nullable=True)
     verified_at         = Column(DateTime(timezone=True), server_default=func.now())

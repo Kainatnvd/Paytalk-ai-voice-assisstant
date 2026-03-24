@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
+from uuid import UUID
 
 
 # ─── Voice ────────────────────────────────────────────────────────────────────
@@ -20,7 +21,7 @@ class VoiceProcessResponse(BaseModel):
 
 class NfcVerifyRequest(BaseModel):
     cnic_hash: str                  # SHA-256 hex from NFC scan
-    user_id: int
+    user_id: UUID
     device_info: Optional[str] = None
 
 
@@ -31,7 +32,7 @@ class NfcVerifyResponse(BaseModel):
 
 class NfcMockRequest(BaseModel):
     cnic: str                       # Plain CNIC for mock NADRA lookup
-    user_id: int
+    user_id: UUID
 
 
 # ─── Admin ────────────────────────────────────────────────────────────────────

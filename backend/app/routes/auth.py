@@ -17,6 +17,7 @@ from app.core.security import (
 from app.database.database import get_db
 from app.models.auth_session import AuthSession
 from app.models.user import User
+from app.models.partner import Partner
 from app.schemas.misc_schema import NfcMockRequest, NfcVerifyRequest, NfcVerifyResponse
 from app.schemas.otp_schema import OtpSendRequest, OtpVerifyRequest, OtpResponse
 from app.schemas.user_schema import TokenResponse, UserLoginRequest, UserRegisterRequest, UserResponse
@@ -34,6 +35,9 @@ def register(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     cnic_hash = hash_cnic(payload.cnic)
     if db.query(User).filter(User.cnic_hash == cnic_hash).first():
         raise HTTPException(status_code=409, detail="CNIC already registered")
+
+    if not db.query(Partner).filter(Partner.partner_id == payload.partner_id).first():
+        raise HTTPException(status_code=400, detail="Invalid partner_id")
 
     user = User(
         phone_number=payload.phone_number,
@@ -64,7 +68,7 @@ def login(payload: UserLoginRequest, request: Request, db: Session = Depends(get
     if user.locked_until and datetime.now(timezone.utc) < user.locked_until:
         raise HTTPException(status_code=423, detail=f"Account locked until {user.locked_until}")
 
-    token, jti = create_access_token({"sub": str(user.user_id)})  # UUID must be str in JWT
+    token, jti = create_access_token({"sub": str(user.user_id)})   # unpack tuple (token, jti)
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
     session = AuthSession(

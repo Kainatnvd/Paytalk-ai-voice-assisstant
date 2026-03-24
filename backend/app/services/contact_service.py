@@ -22,7 +22,7 @@ def match_contact(query_name: str, contacts: List[Contact]) -> dict:
     Returns:
         {
             "matched": bool,
-            "contact": Contact| None,
+            "contact": Contact | None,
             "confidence": float,
             "candidates": list   # top 3 if confidence < threshold
         }
@@ -30,7 +30,7 @@ def match_contact(query_name: str, contacts: List[Contact]) -> dict:
     if not contacts:
         return {"matched": False, "contact": None, "confidence": 0.0, "candidates": []}
 
-    names = [c.contact_name for c in contacts]
+    names = [c.full_name for c in contacts]
     results = process.extract(query_name, names, scorer=fuzz.WRatio, limit=3)
 
     if not results:

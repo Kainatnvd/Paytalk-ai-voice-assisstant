@@ -16,10 +16,10 @@ def verify_cnic_hash(db: Session, cnic_hash: str, user_id: int, ip: str = None) 
 
     # Log every NFC scan
     db.add(NfcVerification(
-    user_id=user_id,
-    cnic_chip_id_hash=cnic_hash,
-    verification_status="success" if matched else "failed",
-))
+        user_id=user_id,
+        cnic_chip_id_hash=cnic_hash,
+        verification_status="success" if matched else "failed",
+    ))
     db.commit()
 
     return matched

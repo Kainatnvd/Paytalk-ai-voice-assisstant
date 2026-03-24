@@ -22,7 +22,7 @@ class AdminUser(Base):
     __tablename__ = "admin_users"
 
     id            = Column(Integer, primary_key=True, index=True)
-    partner_id = Column(UUID(as_uuid=True), ForeignKey("partners.partner_id"), nullable=True)  # NULL = super admin
+    partner_id    = Column(UUID(as_uuid=True), ForeignKey("partners.partner_id"), nullable=True)  # NULL = super admin
     email         = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     role          = Column(String(30), nullable=False, default="partner_admin")
