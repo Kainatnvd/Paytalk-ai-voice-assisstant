@@ -9,7 +9,7 @@ class VoiceCommand(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False, index=True)
-    session_id = Column(Integer, ForeignKey("auth_sessions.id"), nullable=True)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("auth_sessions.id"), nullable=True)
     audio_duration_seconds = Column(Float, nullable=True)
     transcribed_text = Column(Text, nullable=True)
     language_detected = Column(String(10), nullable=True)

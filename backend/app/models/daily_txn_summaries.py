@@ -10,7 +10,7 @@ class DailyTxnSummary(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False, index=True)
-    partner_id = Column(Integer, ForeignKey("partners.id"), nullable=False)
+    partner_id = Column(UUID(as_uuid=True), ForeignKey("partners.partner_id"), nullable=False)
     txn_date = Column(Date, nullable=False)
     total_amount = Column(Numeric(15, 2), default=0.00)
     txn_count = Column(Integer, default=0)

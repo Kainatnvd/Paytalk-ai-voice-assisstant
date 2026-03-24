@@ -1,12 +1,11 @@
 """
-OTP service: generate, send via Twilio SMS, verify with expiry + lockout.
+OTP service: generate, send via console mock (Twilio disabled), verify with expiry + lockout.
 """
 import secrets
 import hashlib
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
-from twilio.rest import Client
 
 from app.core.config import settings
 from app.models.otp import OtpRequest
@@ -16,23 +15,14 @@ MAX_FAILED_ATTEMPTS = 3
 OTP_EXPIRY_SECONDS = 60
 LOCKOUT_MINUTES = 15
 
-_twilio_client = None
-
-
-def _get_twilio() -> Client:
-    global _twilio_client
-    if _twilio_client is None:
-        _twilio_client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-    return _twilio_client
-
 
 def generate_otp() -> str:
     """6-digit cryptographically secure OTP."""
     return str(secrets.randbelow(900000) + 100000)   # always 6 digits
 
 
-def send_otp(db: Session, user_id: int, phone_number: str, purpose: str = "login") -> OtpRequest:
-    """Generate OTP, persist to DB, send via Twilio SMS."""
+def send_otp(db: Session, user_id, phone_number: str, purpose: str = "login") -> OtpRequest:
+    """Generate OTP, persist to DB, print to console (mock mode)."""
     otp_code = generate_otp()
     otp_hash = hashlib.sha256(otp_code.encode()).hexdigest()   # never store plaintext
     expires_at = datetime.now(timezone.utc) + timedelta(seconds=OTP_EXPIRY_SECONDS)
@@ -41,23 +31,19 @@ def send_otp(db: Session, user_id: int, phone_number: str, purpose: str = "login
         user_id=user_id,
         otp_hash=otp_hash,
         phone_number=phone_number,
-        purpose=purpose,          # add this line
+        purpose=purpose,
         expires_at=expires_at,
-)
+    )
     db.add(record)
     db.commit()
     db.refresh(record)
 
-    # Send SMS
-    try:
-        _get_twilio().messages.create(
-            body=f"Your PayTalk OTP is: {otp_code}. Valid for {OTP_EXPIRY_SECONDS} seconds.",
-            from_=settings.TWILIO_PHONE_NUMBER,
-            to=phone_number,
-        )
-    except Exception as e:
-        print(f"[OTP] Twilio send failed: {e}")
-        # Do NOT raise – OTP is still in DB; let caller handle gracefully
+    # ── MOCK MODE: print OTP to console instead of sending via Twilio ──
+    print(f"\n{'='*50}")
+    print(f"[MOCK OTP] Phone: {phone_number}")
+    print(f"[MOCK OTP] Code:  {otp_code}")
+    print(f"[MOCK OTP] Valid for {OTP_EXPIRY_SECONDS} seconds")
+    print(f"{'='*50}\n")
 
     return record
 
@@ -91,7 +77,7 @@ def verify_otp(db: Session, user_id: int, otp_code: str) -> dict:
     submitted_hash = hashlib.sha256(otp_code.encode()).hexdigest()
     if record.otp_hash != submitted_hash:
         record.attempt_count += 1
-        user = db.query(User).filter(User.id == user_id).first()
+        user = db.query(User).filter(User.user_id == user_id).first()
         if user:
             user.failed_auth_count += 1
             if user.failed_auth_count >= MAX_FAILED_ATTEMPTS:
@@ -101,7 +87,7 @@ def verify_otp(db: Session, user_id: int, otp_code: str) -> dict:
 
     # Mark used
     record.is_used = True
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.user_id == user_id).first()
     if user:
         user.failed_auth_count = 0  # reset on success
     db.commit()

@@ -11,15 +11,14 @@ from app.models.user import User
 
 def verify_cnic_hash(db: Session, cnic_hash: str, user_id: int, ip: str = None) -> bool:
     """Compare scanned CNIC hash against stored hash in users table."""
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.user_id == user_id).first()
     matched = user is not None and user.cnic_hash == cnic_hash
 
     # Log every NFC scan
     db.add(NfcVerification(
         user_id=user_id,
-        cnic_hash_scanned=cnic_hash,
-        matched=matched,
-        ip_address=ip,
+        cnic_chip_id_hash=cnic_hash,
+        verification_status="success" if matched else "failed",
     ))
     db.commit()
 

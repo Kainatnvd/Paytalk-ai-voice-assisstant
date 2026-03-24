@@ -28,7 +28,7 @@ def initiate_transfer(
 
     # Step 1: Fuzzy match contact
     match_result = contact_service.find_contact_for_user(
-        db, current_user.id, payload.recipient_name_query
+        db, current_user.user_id, payload.recipient_name_query
     )
     if not match_result["matched"]:
         if match_result["candidates"]:
@@ -44,10 +44,10 @@ def initiate_transfer(
     # Step 2: Return confirmation prompt (BR-005: explicit confirmation required)
     return {
         "status": "awaiting_confirmation",
-        "message": tmpl.confirm_transfer_prompt(contact.contact_name, str(payload.amount), lang),
+        "message": tmpl.confirm_transfer_prompt(contact.full_name, str(payload.amount), lang),
         "pending": {
-            "recipient_name": contact.contact_name,
-            "recipient_account": contact.account_number,
+            "recipient_name": contact.full_name,
+            "recipient_account": contact.raast_id or contact.account_number_masked,
             "amount": str(payload.amount),
         },
     }
@@ -68,7 +68,7 @@ def confirm_transfer(
     lang = current_user.preferred_language or "ur"
 
     # Verify OTP
-    otp_result = otp_service.verify_otp(db, current_user.id, otp_code)
+    otp_result = otp_service.verify_otp(db, current_user.user_id, otp_code)
     if not otp_result["success"]:
         raise HTTPException(status_code=400, detail=otp_result["reason"])
 
@@ -77,7 +77,7 @@ def confirm_transfer(
     try:
         txn = raast_service.initiate_transfer(
             db=db,
-            sender_id=current_user.id,
+            sender_id=current_user.user_id,
             recipient_account=recipient_account,
             recipient_name=recipient_name,
             amount=Decimal(str(amount)),
@@ -103,7 +103,7 @@ def get_transaction(
     """Return details of a single transaction. Only the sender can view it."""
     txn = db.query(Transaction).filter(
         Transaction.id == transaction_id,
-        Transaction.sender_id == current_user.id,
+        Transaction.sender_id == current_user.user_id,
     ).first()
     if not txn:
         raise HTTPException(status_code=404, detail="Transaction not found")

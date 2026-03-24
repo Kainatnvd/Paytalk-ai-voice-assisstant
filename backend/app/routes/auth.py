@@ -16,6 +16,7 @@ from app.core.security import (
 from app.database.database import get_db
 from app.models.auth_session import AuthSession
 from app.models.user import User
+from app.models.partner import Partner
 from app.schemas.misc_schema import NfcMockRequest, NfcVerifyRequest, NfcVerifyResponse
 from app.schemas.otp_schema import OtpSendRequest, OtpVerifyRequest, OtpResponse
 from app.schemas.user_schema import TokenResponse, UserLoginRequest, UserRegisterRequest, UserResponse
@@ -33,6 +34,9 @@ def register(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     cnic_hash = hash_cnic(payload.cnic)
     if db.query(User).filter(User.cnic_hash == cnic_hash).first():
         raise HTTPException(status_code=409, detail="CNIC already registered")
+
+    if not db.query(Partner).filter(Partner.partner_id == payload.partner_id).first():
+        raise HTTPException(status_code=400, detail="Invalid partner_id")
 
     user = User(
         full_name=payload.full_name,
@@ -64,11 +68,11 @@ def login(payload: UserLoginRequest, request: Request, db: Session = Depends(get
     if user.locked_until and datetime.now(timezone.utc) < user.locked_until:
         raise HTTPException(status_code=423, detail=f"Account locked until {user.locked_until}")
 
-    token, jti = create_access_token({"sub": user.id})   # unpack tuple (token, jti)
+    token, jti = create_access_token({"sub": str(user.user_id)})   # unpack tuple (token, jti)
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
     session = AuthSession(
-        user_id=user.id,
+        user_id=user.user_id,
         session_token=token,
         jwt_jti=jti,
         device_id=request.headers.get("X-Device-Id"),
@@ -85,7 +89,7 @@ def login(payload: UserLoginRequest, request: Request, db: Session = Depends(get
 @router.post("/otp/send", response_model=OtpResponse)
 def send_otp(payload: OtpSendRequest, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     """Generate and SMS an OTP to the user's phone number."""
-    otp_service.send_otp(db, current_user.id, payload.phone_number)
+    otp_service.send_otp(db, current_user.user_id, payload.phone_number)
     return OtpResponse(message="OTP sent successfully", expires_in_seconds=60)
 
 
@@ -124,7 +128,7 @@ def logout(current_user=Depends(get_current_user), db: Session = Depends(get_db)
     """Deactivate the current session."""
     session = (
         db.query(AuthSession)
-        .filter(AuthSession.user_id == current_user.id, AuthSession.is_active == True)
+        .filter(AuthSession.user_id == current_user.user_id, AuthSession.is_active == True)
         .order_by(AuthSession.created_at.desc())
         .first()
     )

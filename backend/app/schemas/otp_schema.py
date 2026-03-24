@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel
 
 
@@ -6,7 +8,8 @@ class OtpSendRequest(BaseModel):
 
 
 class OtpVerifyRequest(BaseModel):
-    user_id: int
+    # user_id: int
+    user_id: UUID
     otp_code: str
 
 

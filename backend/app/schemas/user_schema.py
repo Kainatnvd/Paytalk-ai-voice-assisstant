@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import Optional
 from pydantic import BaseModel, EmailStr, field_validator
 import re
@@ -9,7 +10,7 @@ class UserRegisterRequest(BaseModel):
     email: Optional[EmailStr] = None
     password: str
     cnic: str                           # Plain CNIC – encrypted on save, never stored raw
-    partner_id: Optional[int] = None
+    partner_id: UUID
     preferred_language: Optional[str] = "ur"
 
     @field_validator("cnic")
@@ -34,7 +35,7 @@ class UserLoginRequest(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: int
+    user_id: UUID
     full_name: str
     phone_number: str
     email: Optional[str] = None

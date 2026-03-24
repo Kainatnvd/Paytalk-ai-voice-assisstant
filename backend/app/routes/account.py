@@ -39,7 +39,7 @@ def get_history(
     """Return the last N transactions for the authenticated user."""
     transactions = (
         db.query(Transaction)
-        .filter(Transaction.sender_id == current_user.id)
+        .filter(Transaction.sender_id == current_user.user_id)
         .order_by(Transaction.created_at.desc())
         .limit(limit)
         .all()
