@@ -1,0 +1,64 @@
+version: "3.1"
+
+intents:
+  - check_balance
+  - transfer_money
+  - transaction_history
+  - confirm
+  - cancel
+  - get_account_info
+  - goodbye # ADD THIS
+  - bot_challenge # ADD THIS
+
+entities:
+  - amount
+  - recipient
+  - account_number
+
+slots:
+  amount:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: amount
+  recipient:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: recipient
+
+responses:
+  utter_check_balance:
+    - text: "Aapka balance fetch ho raha hai. / Fetching your balance..."
+  utter_transfer_money:
+    - text: "{recipient} ko {amount} rupay bhejna hai? Confirm karein. / Send {amount} to {recipient}? Please confirm."
+  utter_transaction_history:
+    - text: "Aapki recent transactions dikhate hain. / Showing your recent transactions."
+  utter_confirm:
+    - text: "Theek hai, proceed kar rahe hain. / Okay, proceeding."
+  utter_cancel:
+    - text: "Transaction cancel ho gayi. / Transaction cancelled."
+  utter_get_account_info:
+    - text: "Aapki account details fetch ho rahi hain. / Fetching your account details."
+  utter_fallback:
+    - text: "Mujhe samajh nahi aaya. Dobara bolein. / I didn't understand. Please try again."
+  utter_goodbye:
+    - text: "Goodbye! Have a great day!"
+
+  utter_iamabot:
+    - text: "I am PayTalk, your AI-powered voice assistant for seamless banking!"
+
+actions:
+  - utter_check_balance
+  - utter_transfer_money
+  - utter_transaction_history
+  - utter_confirm
+  - utter_cancel
+  - utter_get_account_info
+  - utter_fallback
+  - utter_goodbye
+  - utter_iamabot
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true

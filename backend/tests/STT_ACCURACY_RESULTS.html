@@ -1,0 +1,51 @@
+
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: Arial; direction: rtl; padding: 20px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: right; }
+  th { background: #333; color: white; }
+  .pass { color: green; }
+  .fail { color: red; }
+</style>
+</head>
+<body>
+<h2>PayTalk STT Accuracy Results</h2>
+<table>
+  <tr><th>File</th><th>Expected</th><th>Whisper Output</th><th>Accuracy</th></tr>
+<tr><td>en/en_01.mpeg</td><td>check my balance</td><td>Check my balance.</td><td class="pass">100.0%</td></tr>
+<tr><td>en/en_02.mpeg</td><td>transfer 500 to ali</td><td>Transfer 500 to Ali.</td><td class="pass">100.0%</td></tr>
+<tr><td>en/en_03.mpeg</td><td>show my transactions</td><td>Show my transactions.</td><td class="pass">100.0%</td></tr>
+<tr><td>en/en_04.mpeg</td><td>what is my account number</td><td>What is my account number?</td><td class="pass">100.0%</td></tr>
+<tr><td>en/en_05.mpeg</td><td>send thousand rupees to zara</td><td>Hundred thousand rupees to Zara.</td><td class="fail">80.0%</td></tr>
+<tr><td>en/en_06.mpeg</td><td>show recent history</td><td>Show Recent History</td><td class="pass">100.0%</td></tr>
+<tr><td>en/en_07.mpeg</td><td>transfer two hundred to sara</td><td>Transfer 200 to Sara.</td><td class="fail">60.0%</td></tr>
+<tr><td>en/en_08.mpeg</td><td>check account details</td><td>Check account details.</td><td class="pass">100.0%</td></tr>
+<tr><td>en/en_09.mpeg</td><td>show my recent payments</td><td>Show my recent payments.</td><td class="pass">100.0%</td></tr>
+<tr><td>en/en_10.mpeg</td><td>send money to sara</td><td>Send money to Sarah.</td><td class="fail">75.0%</td></tr>
+<tr><td>ur/ur_01.mpeg</td><td>میرا بیلنس بتاؤ</td><td>میرا بیلنس میں بتا ہوں</td><td class="fail">0.0%</td></tr>
+<tr><td>ur/ur_02.mpeg</td><td>ایک ہزار روپئے فراز کو بھیجو</td><td>ایک ہزار رپے فراز کو بھیجو</td><td class="fail">83.3%</td></tr>
+<tr><td>ur/ur_03.mpeg</td><td>میری ٹرانزیکشنز دیکھا دو</td><td>میری ٹراز ایکشن دکا دو</td><td class="fail">25.0%</td></tr>
+<tr><td>ur/ur_04.mpeg</td><td>میرا اکاؤنٹ نمبر کیا ہے</td><td>میرا اکاونٹ نمبر کیا ہے؟</td><td class="fail">80.0%</td></tr>
+<tr><td>ur/ur_05.mpeg</td><td>پانچ سو روپئے علی کو بھیجو</td><td>500 رپے اللی کو بھیجو</td><td class="fail">33.3%</td></tr>
+<tr><td>ur/ur_06.mpeg</td><td>میری ریسنٹ ہسٹری دیکھاو</td><td>میری ریسنٹ ہیسٹری دکھو</td><td class="fail">50.0%</td></tr>
+<tr><td>ur/ur_07.mpeg</td><td>دو سو روپئے سارہ کو ٹرانسفر کرو</td><td>200 روپے سارا کو ٹرانسفر کرو</td><td class="fail">42.9%</td></tr>
+<tr><td>ur/ur_08.mpeg</td><td>لاگ آؤٹ کرو</td><td>لوگ اوٹ کرو</td><td class="fail">33.3%</td></tr>
+<tr><td>ur/ur_09.mpeg</td><td>پچھلی ٹرانزیکشنز دکھاو</td><td>پچلی ٹرانزاکشنز دکہو</td><td class="fail">0.0%</td></tr>
+<tr><td>ur/ur_10.mpeg</td><td>علی کو پیسے بھیجو</td><td>اللی کو پیسے بھیجو</td><td class="fail">75.0%</td></tr>
+<tr><td>mix/mix_01.mpeg</td><td>میرا بیلنس چیک کرو پلیز</td><td>میرا بیلنس چیک کرو پیس</td><td class="fail">80.0%</td></tr>
+<tr><td>mix/mix_02.mpeg</td><td>سینڈ ہزار روپیز ٹو علی بھائی</td><td>10000 روپیز جو علی بھائی</td><td class="fail">50.0%</td></tr>
+<tr><td>mix/mix_03.mpeg</td><td>میری ٹرانزیکشن ہسٹری شو کرو</td><td>میری ٹرانزاکشن ہیسٹری شو کرو</td><td class="fail">60.0%</td></tr>
+<tr><td>mix/mix_04.mpeg</td><td>اکاونٹ ڈیٹیلز چیک کرو</td><td>اکاونٹ دیٹیلز چیک کرو</td><td class="fail">75.0%</td></tr>
+<tr><td>mix/mix_05.mpeg</td><td>مجھے فائیو ہنڈریڈ روپیز ٹرانسفر کرنے ہیں ٹو فراز</td><td>مجھے 500 رپیز ٹو فراز ٹو فراز</td><td class="fail">33.3%</td></tr>
+
+</table>
+<br>
+<p>English average: 91.5%</p>
+<p>Urdu average: 42.3%</p>
+<p>Mix average: 59.7%</p>
+<p><strong>Overall: 65.4%</strong></p>
+</body>
+</html>

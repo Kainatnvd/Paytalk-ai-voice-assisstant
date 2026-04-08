@@ -1,0 +1,31 @@
+version: "3.1"
+
+stories:
+  - story: check balance
+    steps:
+      - intent: check_balance
+      - action: utter_check_balance
+
+  - story: transfer money and confirm
+    steps:
+      - intent: transfer_money
+      - action: utter_transfer_money
+      - intent: confirm
+      - action: utter_confirm
+
+  - story: transfer money and cancel
+    steps:
+      - intent: transfer_money
+      - action: utter_transfer_money
+      - intent: cancel
+      - action: utter_cancel
+
+  - story: transaction history
+    steps:
+      - intent: transaction_history
+      - action: utter_transaction_history
+
+  - story: get account info
+    steps:
+      - intent: get_account_info
+      - action: utter_get_account_info

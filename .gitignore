@@ -4,3 +4,7 @@ backend/.env
 .env
 *.pyc
 _pycache_/
+rasa/models/
+rasa-venv/
+rasa/.rasa/
+backend/tests/audio_samples/

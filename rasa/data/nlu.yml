@@ -1,0 +1,110 @@
+version: "3.1"
+
+nlu:
+  - intent: check_balance
+    examples: |
+      - Balance batao
+      - Kitna paisa hai
+      - What is my balance
+      - Check balance
+      - Mera balance kya hai
+      - Balance check karo
+      - Mujhe balance dekhna hai
+      - How much money do I have
+      - Account balance batao
+      - Paisa kitna bacha hai
+      - Balance dikhao
+      - What's my account balance
+      - Mere account mein kitna hai
+      - Show my balance
+      - Balance check karna hai
+
+  - intent: transfer_money
+    examples: |
+      - [Ali](recipient) ko [500](amount) bhejo
+      - [Faraz](recipient) ko [1000](amount) rupay bhejo
+      - Send [500](amount) to [Ali](recipient)
+      - Transfer [1000](amount) to [Ahmed](recipient)
+      - [500](amount) rupay [Sara](recipient) ko transfer karo
+      - Bhejo [200](amount) [Usman](recipient) ko
+      - [Ali](recipient) ko paise bhejo [300](amount)
+      - Pay [100](amount) to [Zara](recipient)
+      - Send [2000](amount) rupees to [Hassan](recipient)
+      - [Bilal](recipient) ko [750](amount) rupay send karo
+      - Transfer [500](amount) rupees to [Hamza](recipient)
+      - [1500](amount) [Maria](recipient) ko bhejo
+      - Mujhe [Ali](recipient) ko [600](amount) dene hain
+      - [Ahmed](recipient) bhai ko [400](amount) bhejo
+      - Send money [250](amount) to [Nadia](recipient)
+
+  - intent: transaction_history
+    examples: |
+      - Transactions dikhao
+      - Last transactions
+      - Recent history batao
+      - Show my transactions
+      - Transaction history dikhao
+      - Meri last transactions kya hain
+      - Purani transactions dikhao
+      - Recent activity dikhao
+      - Show transaction history
+      - Mere transactions
+      - Last 5 transactions batao
+      - Account activity dikhao
+      - Payment history
+      - Transactions check karna hai
+      - History dikhao
+
+  - intent: confirm
+    examples: |
+      - Haan
+      - Yes
+      - Theek hai
+      - Confirm karo
+      - Okay
+      - Han
+      - Ji haan
+      - Bilkul
+      - Sure
+      - Proceed karo
+      - Haan karo
+      - Yes please
+      - OK
+      - Agree
+      - Confirm
+
+  - intent: cancel
+    examples: |
+      - Nahi
+      - No
+      - Cancel
+      - Rukk jao
+      - Mat karo
+      - Nai
+      - Stop
+      - Cancel karo
+      - Nahi chahiye
+      - Rokk do
+      - No thanks
+      - Cancel kar do
+      - Wapis jao
+      - Never mind
+      - Rehne do
+
+  - intent: get_account_info
+    examples: |
+      - Account number batao
+      - My account details
+      - Account info dikhao
+      - Account details kya hain
+      - Mera account number kya hai
+      - Show account details
+      - Account ki information batao
+      - What is my account number
+      - Account details batao
+      - Mere account ki details
+      - Account info chahiye
+      - Account number kya hai
+      - Show my account info
+      - Account details dikhao
+      - Mera account details batao
