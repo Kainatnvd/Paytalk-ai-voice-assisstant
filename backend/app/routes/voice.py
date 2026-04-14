@@ -124,21 +124,30 @@ async def process_voice(
         amount = entities.get("amount", 0)
 
         if not recipient_query or not amount:
-            response_text = "Pleae batayein: kise aur kitne rupay bhejna hai?" if lang == "ur" else "Please specify recipient and amount."
+            response_text = "Batayein: kise aur kitne rupay bhejna hai?" if lang == "ur" else "Please specify recipient and amount."
         else:
             match_result = contact_service.find_contact_for_user(db, current_user.user_id, recipient_query)
-            if match_result["matched"]:
+
+            if not match_result["matched"]:
+                response_text = "Contact nahi mila. Naam dobara bolein." if lang == "ur" else "Contact not found. Please repeat the name."
+
+            elif match_result["confidence"] == "high":
                 contact = match_result["contact"]
                 pending = {
-                    "recipient_name": contact.contact_name,
-                    "recipient_account": contact.account_number,
+                    "recipient_name": contact.full_name,
+                    "recipient_account": contact.account_number_masked,
                     "amount": str(amount),
                 }
                 dialogue_service.set_state(db, session_id, "AWAITING_CONFIRMATION", pending)
-                response_text = tmpl.confirm_transfer_prompt(contact.contact_name, str(amount), lang)
-            else:
-                response_text = "Contact nahi mila. Naam dobara bolein." if lang == "ur" else "Contact not found. Please repeat the name."
+                response_text = tmpl.confirm_transfer_prompt(contact.full_name, str(amount), lang)
 
+            elif match_result["confidence"] == "low":
+                names = ", ".join([c.full_name for c in match_result["candidates"]])
+                response_text = (
+                    f"Kya aap in mein se kisi ko bhejna chahte hain? {names}"
+                    if lang == "ur"
+                    else f"Did you mean one of these? {names}. Please say the full name."
+                )
     else:
         response_text = tmpl.unknown_intent(lang)
 

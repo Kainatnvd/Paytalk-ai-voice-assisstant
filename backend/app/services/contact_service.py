@@ -1,66 +1,85 @@
 """
 Contact matching service using RapidFuzz for fuzzy name resolution.
+
+Tiered strategy:
+  90%+      → high confidence, auto-match
+  70-89%    → low confidence, return top 3 candidates
+  below 70% → not found
 """
-from typing import List, Optional
+from typing import List
 from rapidfuzz import process, fuzz
 from sqlalchemy.orm import Session
 
 from app.models.contacts import Contact
 
-MATCH_THRESHOLD = 75  # minimum similarity score (0-100)
+HIGH_CONFIDENCE = 90   # auto-match threshold
+LOW_CONFIDENCE  = 70   # minimum to show candidates
 
 
-def get_user_contacts(db: Session, user_id: int) -> List[Contact]:
-    """Fetch all saved beneficiaries for a user."""
-    return db.query(Contact).filter(Contact.user_id == user_id).all()
+def get_user_contacts(db: Session, user_id) -> List[Contact]:
+    """Fetch all active saved beneficiaries for a user."""
+    return (
+        db.query(Contact)
+        .filter(Contact.user_id == user_id, Contact.is_active == True)
+        .all()
+    )
 
 
 def match_contact(query_name: str, contacts: List[Contact]) -> dict:
     """
-    Fuzzy-match a spoken name against the user's Contactlist.
+    Fuzzy-match a spoken name against the user's contact list.
 
     Returns:
         {
             "matched": bool,
-            "contact": Contact | None,
-            "confidence": float,
-            "candidates": list   # top 3 if confidence < threshold
+            "confidence": "high" | "low" | None,
+            "contact": Contact | None,       # set when confidence == "high"
+            "candidates": [Contact, ...]     # set when confidence == "low"
+            "score": float
         }
     """
     if not contacts:
-        return {"matched": False, "contact": None, "confidence": 0.0, "candidates": []}
+        return {"matched": False, "confidence": None, "contact": None, "candidates": [], "score": 0.0}
 
-    names = [c.full_name for c in contacts]
-    results = process.extract(query_name, names, scorer=fuzz.WRatio, limit=3)
+    query_lower = query_name.strip().lower()
 
-    if not results:
-        return {"matched": False, "contact": None, "confidence": 0.0, "candidates": []}
+    # Score against full_name AND nickname, take the best
+    scored = []
+    for contact in contacts:
+        name_score = fuzz.token_set_ratio(query_lower, contact.full_name.lower())
+        nick_score = fuzz.token_set_ratio(query_lower, contact.nickname.lower()) if contact.nickname else 0
+        best = max(name_score, nick_score)
+        scored.append((contact, best))
 
-    best_name, best_score, best_idx = results[0]
+    scored.sort(key=lambda x: x[1], reverse=True)
+    best_contact, best_score = scored[0]
 
-    if best_score >= MATCH_THRESHOLD:
-        matched_contact = contacts[best_idx]
+    # Tier 1: 90%+ — auto match
+    if best_score >= HIGH_CONFIDENCE:
         return {
             "matched": True,
-            "contact": matched_contact,
-            "confidence": round(best_score, 2),
+            "confidence": "high",
+            "contact": best_contact,
             "candidates": [],
+            "score": round(best_score, 2),
         }
 
-    # Below threshold – return top 3 for user to pick
-    candidates = [
-        {"name": r[0], "confidence": round(r[1], 2), "index": r[2]}
-        for r in results
-    ]
-    return {
-        "matched": False,
-        "contact": None,
-        "confidence": round(best_score, 2),
-        "candidates": candidates,
-    }
+    # Tier 2: 70-89% — show top 3
+    candidates = [c for c, s in scored if s >= LOW_CONFIDENCE][:3]
+    if candidates:
+        return {
+            "matched": True,
+            "confidence": "low",
+            "contact": None,
+            "candidates": candidates,
+            "score": round(best_score, 2),
+        }
+
+    # Tier 3: below 70% — not found
+    return {"matched": False, "confidence": None, "contact": None, "candidates": [], "score": round(best_score, 2)}
 
 
-def find_contact_for_user(db: Session, user_id: int, query_name: str) -> dict:
+def find_contact_for_user(db: Session, user_id, query_name: str) -> dict:
     """Convenience: fetch contacts then match."""
     contacts = get_user_contacts(db, user_id)
     return match_contact(query_name, contacts)

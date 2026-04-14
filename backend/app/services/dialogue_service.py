@@ -18,8 +18,8 @@ def get_state(db: Session, session_id: int) -> dict:
     if not session:
         return {"state": "IDLE", "pending_action": None}
     pending = json.loads(session.pending_action) if session.pending_action else None
-    return {"state": session.dialogue_state, "pending_action": pending}
-
+    return {"state": session.dialogue_state or "IDLE", "pending_action": pending}
+  
 
 def set_state(db: Session, session_id: int, state: str, pending_action: Optional[dict] = None):
     if state not in VALID_STATES:
