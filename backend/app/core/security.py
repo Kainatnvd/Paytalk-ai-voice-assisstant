@@ -57,6 +57,11 @@ def decode_access_token(token: str) -> dict:
 
 # ─── CNIC Hashing & AES-256 Encryption ───────────────────────────────────────
 
+def normalize_cnic(cnic: str) -> str:
+    """Normalize CNIC: strip dashes and whitespace to get exactly 13 digits."""
+    return cnic.replace("-", "").strip()
+
+
 def hash_cnic(cnic: str) -> str:
     """SHA-256 hash of CNIC for fast lookup/matching."""
     return hashlib.sha256(cnic.encode()).hexdigest()

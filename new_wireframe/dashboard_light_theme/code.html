@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4F46E5",
+                        "on-primary": "#ffffff",
+                        "surface": "#ffffff",
+                        "on-surface": "#1F2937",
+                        "on-surface-variant": "#6B7280",
+                        "surface-container": "#F9FAFB",
+                        "surface-container-high": "#F3F4F6",
+                        "surface-container-highest": "#E5E7EB",
+                        "primary-container": "#EEF2FF",
+                        "on-primary-container": "#312E81",
+                        "secondary-container": "#F5F3FF",
+                        "on-secondary-container": "#4C1D95",
+                        "outline": "#E5E7EB",
+                        "outline-variant": "#F3F4F6"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px"
+                    },
+                    fontFamily: {
+                        headline: ["Inter"],
+                        body: ["Inter"],
+                        label: ["Inter"],
+                        urdu: ["Noto Nastaliq Urdu"],
+                        display: "Inter"
+                    },
+                    animation: {
+                        "pulse-slow": "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                        float: "float 6s ease-in-out infinite"
+                    },
+                    keyframes: {
+                        float: {
+                            "0%, 100%": {transform: "translateY(0) scale(1)"},
+                            "50%": {transform: "translateY(-10px) scale(1.05)"}
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .orb-glow {
+            background: radial-gradient(circle at center, rgba(79, 70, 229, 0.08) 0%, rgba(79, 70, 229, 0.02) 50%, transparent 70%);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+        }
+        .ethereal-orb {
+            background: radial-gradient(circle at center, #6366F1 0%, rgba(99, 102, 241, 0.2) 40%, transparent 75%);
+        }
+        .dock-blur {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px) saturate(160%);
+        }
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container overflow-x-hidden">
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-white/70 backdrop-blur-lg border-b border-outline-variant">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden border border-outline">
+<img alt="Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHOmCy3NUEDc2iZJ990U3CbdMqsdc8F9nmMFax8MK3XC1E6S130UKlcR1mvGs7nLff-7DwmRjkIChFVz5ozeaN13lZB6ehdU49yyVwQn45cY2fJN3mJGdjT6IRvCFtxk4CAyuud_iDaA9z70sAhqX4ktdOH2yAY6bgixyPf8U96fNHWw4H6CYUSnlSnUnYl2KmNE-oueGs1Lz5PBUuOljLQmc8q2kgAgT5OlolfBpvcUo1Y9rBwxTgyxLXGqLqIO8_7eDkwDS_IbA"/>
+</div>
+<div>
+<p class="text-xs text-on-surface-variant font-label">Hello, Alex</p>
+<h1 class="text-xl font-bold text-primary font-headline tracking-tight">PayTalk</h1>
+</div>
+</div>
+<div class="bg-primary-container px-4 py-2 rounded-full border border-primary/10 flex items-center gap-2">
+<span class="text-on-primary-container text-sm font-bold font-headline tracking-tight">$24,500.00</span>
+</div>
+</header>
+<main class="min-h-screen pt-24 pb-40 px-6 flex flex-col items-center justify-center relative overflow-hidden">
+<div class="absolute inset-0 pointer-events-none">
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] orb-glow rounded-full opacity-60"></div>
+</div>
+<div class="relative z-10 flex flex-col items-center space-y-12 w-full max-w-lg">
+<div class="relative w-72 h-72 flex items-center justify-center animate-float">
+<div class="absolute inset-0 ethereal-orb rounded-full opacity-40 mix-blend-multiply animate-pulse-slow"></div>
+<div class="absolute inset-8 ethereal-orb rounded-full opacity-20 mix-blend-multiply animate-pulse blur-xl"></div>
+<div class="relative w-40 h-40 rounded-full border border-primary/10 flex items-center justify-center">
+<div class="absolute inset-0 bg-white/40 backdrop-blur-3xl rounded-full border border-white"></div>
+</div>
+</div>
+<div class="text-center space-y-2">
+<h2 class="text-2xl font-headline font-medium tracking-tight text-on-surface">Say something...</h2>
+<p class="text-xl font-urdu text-on-surface-variant/70" dir="rtl">کچھ کہیے...</p>
+</div>
+<button class="group relative w-20 h-20 flex items-center justify-center rounded-full bg-primary text-on-primary shadow-[0_8px_30px_rgb(79,70,229,0.3)] transition-transform active:scale-95 duration-200">
+<div class="absolute inset-0 rounded-full border-4 border-primary opacity-10 group-hover:scale-125 transition-transform duration-500"></div>
+<span class="material-symbols-outlined text-4xl" data-icon="mic" style="font-variation-settings: 'FILL' 1;">mic</span>
+</button>
+<div class="w-full space-y-6 pt-8">
+<div class="flex items-start gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center flex-shrink-0 border border-on-secondary-container/10">
+<span class="material-symbols-outlined text-xs text-on-secondary-container" data-icon="smart_toy">smart_toy</span>
+</div>
+<div class="glass-card p-4 rounded-tr-2xl rounded-br-2xl rounded-bl-2xl max-w-[80%] border border-outline">
+<p class="text-sm leading-relaxed text-on-surface">How can I help you manage your funds today, Alex?</p>
+</div>
+</div>
+<div class="flex items-start gap-3 justify-end">
+<div class="bg-primary-container p-4 rounded-tl-2xl rounded-bl-2xl rounded-br-2xl max-w-[80%] border border-primary/10 shadow-sm">
+<p class="text-sm leading-relaxed text-on-primary-container">What's my spending limit for this week?</p>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden flex-shrink-0 border border-outline">
+<img alt="User" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmMidzxDNf9KFhePBC2p3Q3B1wkA4sbkoVT18JtC0tTbAd9vvouqALzWKQf-4dyO_XNwuP19zEgWlw7hejP9hvTrKvxeJeCKbgztVGQFI6LdrjnMv-3HLHcvx235Z38VKIveqP92hp4pf76W9Xg7RtQdZ4DPLrKxAK1_dmAOuGLLTB5fpflKpeUooS_t8FsKDBAcTPQhTi3cZUHBw3A96Ou-55xF0zTaUkf9UesikUhMVMv0HfgdE5TJgWYHDLhbHmWcjEF7wCPcA"/>
+</div>
+</div>
+</div>
+</div>
+</main>
+<div class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md">
+<nav class="dock-blur px-2 py-2 rounded-3xl border border-outline shadow-xl flex items-center justify-between">
+<button class="w-12 h-12 flex items-center justify-center rounded-2xl text-on-surface-variant hover:bg-surface-container hover:text-primary transition-all">
+<span class="material-symbols-outlined text-2xl" data-icon="dashboard">dashboard</span>
+</button>
+<button class="w-12 h-12 flex items-center justify-center rounded-2xl text-on-surface-variant hover:bg-surface-container hover:text-primary transition-all">
+<span class="material-symbols-outlined text-2xl" data-icon="account_balance_wallet">account_balance_wallet</span>
+</button>
+<button class="w-14 h-14 bg-gradient-to-tr from-primary to-indigo-600 rounded-2xl flex items-center justify-center text-on-primary shadow-lg shadow-primary/30 -translate-y-5 hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-2xl" data-icon="mic" style="font-variation-settings: 'FILL' 1;">mic</span>
+</button>
+<button class="w-12 h-12 flex items-center justify-center rounded-2xl text-on-surface-variant hover:bg-surface-container hover:text-primary transition-all">
+<span class="material-symbols-outlined text-2xl" data-icon="history">history</span>
+</button>
+<button class="w-12 h-12 flex items-center justify-center rounded-2xl text-on-surface-variant hover:bg-surface-container hover:text-primary transition-all">
+<span class="material-symbols-outlined text-2xl" data-icon="settings">settings</span>
+</button>
+</nav>
+</div>
+</body></html>

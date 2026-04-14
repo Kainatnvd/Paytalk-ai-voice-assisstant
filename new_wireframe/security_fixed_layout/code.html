@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#6366F1", // Purplish-blue accent
+                        secondary: "#818cf8",
+                        "primary-container": "#eef2ff",
+                        "on-primary": "#ffffff",
+                        "on-surface": "#1e1b4b",
+                        "on-surface-variant": "#4f46e5",
+                        surface: "#ffffff",
+                        background: "#ffffff",
+                        outline: "#e2e8f0",
+                        "surface-container": "#f8fafc"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "1rem",
+                        "2xl": "1.5rem",
+                        full: "9999px"
+                    },
+                    fontFamily: {
+                        headline: ["Inter"],
+                        body: ["Inter"],
+                        label: ["Inter"],
+                        arabic: ["Noto Sans Arabic"],
+                        display: "Inter"
+                    }
+                }
+            }
+        };
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #ffffff; }
+        .font-headline { font-family: 'Inter', sans-serif; }
+        .font-arabic { font-family: 'Noto Sans Arabic', sans-serif; }
+        .bento-card { background: #ffffff; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05); }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .inner-glow:hover { box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2); }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-white text-on-surface min-h-screen selection:bg-primary-container selection:text-primary">
+<!-- TopAppBar Shell -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-white/80 backdrop-blur-xl border-b border-slate-50">
+<div class="flex items-center gap-3 mb-20">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-primary/10">
+<img alt="Alex Rivers" class="w-full h-full object-cover" data-alt="Close-up portrait of a professional man with clean lighting and a soft neutral studio background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9sIVrVJgO15kU1MRUmnzakqDuGisfyzq_1NdsdCvtjwDFiYAvlkWfhd05sHrkhnAUrV7AcBpfn02t42w8WpjibthWbXhdFYspmQ1Cq6a0XKf6NVAPl-B5I9350LMp47KuaIn5bxJqcD4a9TdtY2Yj6IFfIJ-jerCapF4KDJmjoOm_fBmEQ6_aN3uopWVq0Mry0wP9RdppTAHsVpY3rian3ibnkWA-4FyAqrYb3kZp3yFvbHFrL2I11ZdJb-aQ5xw6212rUXbH0cE"/>
+</div>
+<span class="text-xl font-bold text-primary font-headline tracking-tight">PayTalk</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">shield_with_heart</span>
+<span class="text-primary font-headline font-bold text-lg">$24,500.00</span>
+</div>
+</header>
+<main class="pt-24 px-6 flex flex-col items-center justify-center min-h-screen relative overflow-hidden pb-48">
+<!-- Background Ambient Blurs - Refined for White Base -->
+<div class="absolute top-1/4 -left-20 w-96 h-96 bg-primary/5 rounded-full blur-[120px]"></div>
+<div class="absolute bottom-1/4 -right-20 w-96 h-96 bg-secondary/5 rounded-full blur-[120px]"></div>
+<!-- Verification Context Card -->
+<div class="w-full max-w-lg mb-12 text-center">
+<div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/5 border border-primary/10 mb-6">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-primary text-xs font-bold tracking-wider uppercase">High Value Transaction</span>
+</div>
+<h1 class="text-4xl md:text-5xl font-headline font-bold text-on-surface tracking-tight mb-4">
+            Confirming <span class="text-primary">$5,200.00</span>
+</h1>
+<p class="text-slate-500 max-w-sm mx-auto">
+            Sending to <span class="text-primary font-semibold">Sophia Martinez</span> for Real Estate Deposit.
+        </p>
+</div>
+<!-- Voice Orb & OTP Section -->
+<div class="relative w-full max-w-md flex flex-col items-center">
+<!-- Voice Input Status -->
+<div class="text-center mb-10">
+<p class="text-primary font-headline font-semibold text-lg mb-2">Please speak your 6-digit OTP</p>
+<p class="text-primary/60 font-arabic font-medium text-lg leading-[2.2]" dir="rtl">براہ کرم اپنا 6 ہندسوں کا OTP بولیں</p>
+</div>
+<!-- OTP Digit Grid -->
+<div class="flex gap-3 mb-20">
+<!-- Digit 1 (Active/Listening) -->
+<div class="w-14 h-16 rounded-xl bg-white border-2 border-primary flex items-center justify-center text-3xl font-headline font-bold text-primary shadow-lg shadow-primary/10">
+<span class="animate-pulse">|</span>
+</div>
+<!-- Empty Slots -->
+<div class="w-14 h-16 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-3xl font-headline font-bold text-primary/10">0</div>
+<div class="w-14 h-16 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-3xl font-headline font-bold text-primary/10">0</div>
+<div class="w-14 h-16 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-3xl font-headline font-bold text-primary/10">0</div>
+<div class="w-14 h-16 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-3xl font-headline font-bold text-primary/10">0</div>
+<div class="w-14 h-16 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-3xl font-headline font-bold text-primary/10">0</div>
+</div>
+<!-- Central Voice Orb with Countdown Progress -->
+<div class="relative flex items-center justify-center">
+<!-- Circular Progress Ring SVG -->
+<svg class="absolute w-44 h-44 -rotate-90">
+<circle class="text-slate-50" cx="88" cy="88" fill="transparent" r="80" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-primary" cx="88" cy="88" fill="transparent" r="80" stroke="currentColor" stroke-dasharray="502" stroke-dashoffset="125" stroke-linecap="round" stroke-width="4"></circle>
+</svg>
+<!-- The Voice Orb -->
+<div class="w-32 h-32 rounded-full bg-gradient-to-tr from-primary to-secondary p-0.5 shadow-2xl shadow-primary/30">
+<div class="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden relative group">
+<!-- Animated "Energy" Inner Glow -->
+<div class="absolute inset-0 bg-primary/5 animate-pulse"></div>
+<!-- Mic Icon -->
+<span class="material-symbols-outlined text-4xl text-primary relative z-10" data-weight="fill">mic</span>
+<!-- Pulse Rings -->
+<div class="absolute w-full h-full rounded-full border border-primary/20 animate-[ping_2s_linear_infinite]"></div>
+</div>
+</div>
+<!-- Timer Overlay -->
+<div class="absolute -bottom-16 flex flex-col items-center">
+<span class="text-primary font-headline font-bold text-xl">0:42</span>
+<span class="text-slate-400 text-[10px] uppercase tracking-[0.2em] font-bold">Seconds left</span>
+</div>
+</div>
+</div>
+<!-- Bento Style Detail Panels -->
+<div class="w-full grid grid-cols-1 md:grid-cols-2 gap-4 mt-40">
+<div class="bento-card p-6 rounded-2xl">
+<div class="flex items-start justify-between mb-4">
+<div class="p-2 rounded-xl bg-primary/10">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+</div>
+<div class="flex-1 ml-4">
+<p class="text-primary text-[10px] uppercase tracking-widest font-bold mb-1">Security Protocol</p>
+<h3 class="text-lg font-bold text-on-surface">Voice Biomarker Active</h3>
+</div>
+</div>
+<p class="text-slate-500 text-sm leading-relaxed">
+                Our AI is matching your unique vocal pattern and 6-digit code against your encrypted profile.
+            </p>
+</div>
+<div class="bento-card p-6 rounded-2xl flex flex-col justify-between">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">location_on</span>
+</div>
+<div>
+<p class="text-slate-400 text-[10px] uppercase tracking-widest font-bold">Transaction Location</p>
+<p class="text-on-surface font-semibold text-sm">Trusted Network • London, UK</p>
+</div>
+</div>
+<div class="flex gap-3 mb-20">
+<button class="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-bold py-3.5 rounded-xl transition-all border border-slate-100">
+                    Cancel
+                </button>
+<button class="flex-1 bg-primary text-white font-bold text-xs py-3.5 rounded-xl inner-glow shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95">
+                    Resend OTP
+                </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Dock Bottom Navigation -->
+<div class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-xs">
+<nav class="bg-white/90 backdrop-blur-2xl border border-slate-100 rounded-full h-16 flex items-center justify-between px-6 shadow-2xl">
+<a class="text-slate-400 hover:text-primary transition-colors p-2" href="#">
+<span class="material-symbols-outlined text-2xl">account_balance_wallet</span>
+</a>
+<div class="relative -top-8">
+<a class="w-16 h-16 bg-gradient-to-tr from-primary to-secondary text-white rounded-full flex items-center justify-center shadow-xl shadow-primary/40 transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">mic</span>
+</a>
+</div>
+<a class="text-slate-400 hover:text-primary transition-colors p-2" href="#">
+<span class="material-symbols-outlined text-2xl">history</span>
+</a>
+</nav>
+</div>
+<!-- Decorative Texture - Subtler for White Base -->
+<div class="fixed inset-0 pointer-events-none opacity-[0.01] mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+</body></html>
