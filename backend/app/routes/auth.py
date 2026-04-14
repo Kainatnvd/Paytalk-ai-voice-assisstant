@@ -12,6 +12,7 @@ from app.core.security import (
     get_current_user,
     hash_cnic,
     hash_password,
+    normalize_cnic,
     verify_password,
 )
 from app.database.database import get_db
@@ -32,7 +33,10 @@ def register(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     if db.query(User).filter(User.phone_number == payload.phone_number).first():
         raise HTTPException(status_code=409, detail="Phone number already registered")
 
-    cnic_hash = hash_cnic(payload.cnic)
+    # Normalize CNIC: strip dashes so "12345-6789012-3" → "1234567890123"
+    cnic_normalized = normalize_cnic(payload.cnic)
+
+    cnic_hash = hash_cnic(cnic_normalized)
     if db.query(User).filter(User.cnic_hash == cnic_hash).first():
         raise HTTPException(status_code=409, detail="CNIC already registered")
 
@@ -44,7 +48,7 @@ def register(payload: UserRegisterRequest, db: Session = Depends(get_db)):
         email=payload.email,
         password_hash=hash_password(payload.password),
         cnic_hash=cnic_hash,
-        cnic_encrypted=encrypt_cnic(payload.cnic),
+        cnic_encrypted=encrypt_cnic(cnic_normalized),
         partner_id=payload.partner_id,
         preferred_language=payload.preferred_language or "ur",
     )
@@ -118,7 +122,8 @@ def nfc_mock(payload: NfcMockRequest, db: Session = Depends(get_db)):
     nadra_result = nfc_service.mock_nadra_lookup(payload.cnic)
     if not nadra_result["valid"]:
         raise HTTPException(status_code=400, detail=nadra_result.get("reason"))
-    cnic_hash = hash_cnic(payload.cnic.replace("-", ""))
+    cnic_normalized = normalize_cnic(payload.cnic)
+    cnic_hash = hash_cnic(cnic_normalized)
     matched = nfc_service.verify_cnic_hash(db, cnic_hash, payload.user_id)
     return {**nadra_result, "hash_matched": matched}
 
