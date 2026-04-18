@@ -1,6 +1,7 @@
 import '../models/transaction.dart';
 import '../models/chat_message.dart';
 
+/// Fallback mock data used when backend is unavailable.
 class MockData {
   static List<Transaction> get transactions => [
         Transaction(
@@ -10,7 +11,6 @@ class MockData {
           amount: 1299.00,
           status: 'COMPLETED',
           type: TransactionType.expense,
-          icon: 'shopping_bag',
         ),
         Transaction(
           id: '2',
@@ -19,7 +19,6 @@ class MockData {
           amount: 8450.00,
           status: 'COMPLETED',
           type: TransactionType.income,
-          icon: 'call_received',
         ),
       ];
 

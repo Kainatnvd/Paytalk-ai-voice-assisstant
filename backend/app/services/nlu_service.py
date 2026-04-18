@@ -27,7 +27,19 @@ def _keyword_classify(text: str) -> Dict[str, Any]:
     lower = text.lower()
     for intent, pattern in _KEYWORD_RULES:
         if re.search(pattern, lower):
-            return {"intent": intent, "confidence": 0.60, "entities": {}}
+            entities = {}
+            if intent == "transfer_money":
+                amt_match = re.search(r'\b(\d+)\b', text)
+                if amt_match:
+                    entities["amount"] = int(amt_match.group(1))
+                
+                demo_names = ["cafe", "coffee", "tailor", "school", "electric", "ali", "ahmed"]
+                for name in demo_names:
+                    if name in lower:
+                        entities["recipient"] = name
+                        break
+            
+            return {"intent": intent, "confidence": 0.60, "entities": entities}
     return {"intent": "unknown", "confidence": 0.0, "entities": {}}
 
 
@@ -64,5 +76,6 @@ def classify_intent(text: str) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        print(f"[NLU] Rasa unreachable ({e}), falling back to keyword matching.")
+        # Use a more user-friendly warning instead of a raw exception print
+        print(f"[NLU] Rasa offline (Status: Using Rule-based Matcher)")
         return _keyword_classify(text)

@@ -21,8 +21,9 @@ from app.models.user import User
 from app.models.partner import Partner
 from app.schemas.misc_schema import NfcMockRequest, NfcVerifyRequest, NfcVerifyResponse
 from app.schemas.otp_schema import OtpSendRequest, OtpVerifyRequest, OtpResponse
-from app.schemas.user_schema import TokenResponse, UserLoginRequest, UserRegisterRequest, UserResponse
+from app.schemas.user_schema import TokenResponse, UserLoginRequest, UserRegisterRequest, UserResponse, ForgotPasswordRequest
 from app.services import nfc_service, otp_service
+from app.models.contacts import Contact
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -40,21 +41,42 @@ def register(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     if db.query(User).filter(User.cnic_hash == cnic_hash).first():
         raise HTTPException(status_code=409, detail="CNIC already registered")
 
-    if not db.query(Partner).filter(Partner.partner_id == payload.partner_id).first():
+    partner_id = payload.partner_id
+    if partner_id is None:
+        default_partner = db.query(Partner).first()
+        if not default_partner:
+            raise HTTPException(status_code=500, detail="No partners found in database. Please run create_partner.py.")
+        partner_id = default_partner.partner_id
+    elif not db.query(Partner).filter(Partner.partner_id == partner_id).first():
         raise HTTPException(status_code=400, detail="Invalid partner_id")
 
     user = User(
+        full_name=payload.full_name or "Unknown User",
         phone_number=payload.phone_number,
         email=payload.email,
         password_hash=hash_password(payload.password),
         cnic_hash=cnic_hash,
         cnic_encrypted=encrypt_cnic(cnic_normalized),
-        partner_id=payload.partner_id,
+        partner_id=partner_id,
         preferred_language=payload.preferred_language or "ur",
     )
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    # Seed demo contacts for the new user so they can immediately test voice NLP
+    demo_contacts = [
+        Contact(user_id=user.user_id, full_name="Cafe", account_number_masked="****1111", bank_name="HBL"),
+        Contact(user_id=user.user_id, full_name="Coffee Shop", account_number_masked="****2222", bank_name="Meezan"),
+        Contact(user_id=user.user_id, full_name="Tailor", account_number_masked="****3333", bank_name="Alfalah"),
+        Contact(user_id=user.user_id, full_name="School", account_number_masked="****4444", bank_name="Allied"),
+        Contact(user_id=user.user_id, full_name="Electric Bill", account_number_masked="****5555", bank_name="KE"),
+        Contact(user_id=user.user_id, full_name="Ali", account_number_masked="****6666", bank_name="JazzCash"),
+        Contact(user_id=user.user_id, full_name="Ahmed", account_number_masked="****7777", bank_name="Easypaisa"),
+    ]
+    db.add_all(demo_contacts)
+    db.commit()
+
     return user
 
 
@@ -88,6 +110,25 @@ def login(payload: UserLoginRequest, request: Request, db: Session = Depends(get
     db.commit()
 
     return TokenResponse(access_token=token, user=user)
+
+
+@router.post("/reset-password")
+def reset_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """Reset a user's password using their phone number and CNIC."""
+    user = db.query(User).filter(User.phone_number == payload.phone_number).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    cnic_normalized = normalize_cnic(payload.cnic)
+    cnic_hash = hash_cnic(cnic_normalized)
+
+    if user.cnic_hash != cnic_hash:
+        raise HTTPException(status_code=401, detail="Identity verification failed. Invalid CNIC.")
+
+    user.password_hash = hash_password(payload.new_password)
+    db.commit()
+
+    return {"message": "Password reset successfully"}
 
 
 @router.post("/otp/send", response_model=OtpResponse)

@@ -36,8 +36,8 @@ app.include_router(admin.router)
 # ── Startup: pre-load Whisper model ──────────────────────────────────────────
 @app.on_event("startup")
 async def startup_event():
-    print("[PayTalk] Starting up – pre-loading Whisper model...")
-    get_model()
+    print("[PayTalk] Starting up...")
+    # get_model()  # Commented out to prevent hang during startup
     print("[PayTalk] Ready.")
 
 
