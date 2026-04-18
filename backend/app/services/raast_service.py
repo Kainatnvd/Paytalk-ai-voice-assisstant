@@ -20,13 +20,14 @@ from app.models.transaction import Transaction, TransactionStatus
 IDEMPOTENCY_WINDOW_SECONDS = 60
 
 
-def _log(db: Session, action: str, user_id: int, details: dict, level: str = "INFO"):
+def _log(db: Session, action: str, user_id: uuid.UUID, details: dict, level: str = "INFO"):
     db.add(SystemLog(
-        log_level=level,
-        service="raast_service",
-        action=action,
-        user_id=user_id,
-        details=json.dumps(details),
+        severity=level,
+        event_type="transaction",
+        event_subtype=action,
+        user_id=None,  # skip direct integer casting for now if UUID mismatch
+        message=f"Raast action: {action}",
+        metadata_json=json.dumps(details),
     ))
 
 

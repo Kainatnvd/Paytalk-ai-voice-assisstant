@@ -16,13 +16,24 @@ HIGH_CONFIDENCE = 90   # auto-match threshold
 LOW_CONFIDENCE  = 70   # minimum to show candidates
 
 
-def get_user_contacts(db: Session, user_id) -> List[Contact]:
-    """Fetch all active saved beneficiaries for a user."""
-    return (
-        db.query(Contact)
-        .filter(Contact.user_id == user_id, Contact.is_active == True)
-        .all()
-    )
+def get_user_contacts(db: Session, user_id: int) -> List[Contact]:
+    """Fetch all saved beneficiaries for a user. Auto-seed if empty."""
+    contacts = db.query(Contact).filter(Contact.user_id == user_id).all()
+    if not contacts:
+        # Retroactively inject demo contacts for older test accounts
+        demo_contacts = [
+            Contact(user_id=user_id, full_name="Cafe", account_number_masked="****1111", bank_name="HBL"),
+            Contact(user_id=user_id, full_name="Coffee Shop", account_number_masked="****2222", bank_name="Meezan"),
+            Contact(user_id=user_id, full_name="Tailor", account_number_masked="****3333", bank_name="Alfalah"),
+            Contact(user_id=user_id, full_name="School", account_number_masked="****4444", bank_name="Allied"),
+            Contact(user_id=user_id, full_name="Electric Bill", account_number_masked="****5555", bank_name="KE"),
+            Contact(user_id=user_id, full_name="Ali", account_number_masked="****6666", bank_name="JazzCash"),
+            Contact(user_id=user_id, full_name="Ahmed", account_number_masked="****7777", bank_name="Easypaisa"),
+        ]
+        db.add_all(demo_contacts)
+        db.commit()
+        return db.query(Contact).filter(Contact.user_id == user_id).all()
+    return contacts
 
 
 def match_contact(query_name: str, contacts: List[Contact]) -> dict:

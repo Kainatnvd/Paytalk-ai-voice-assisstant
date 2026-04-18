@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from app.core.security import get_current_user
 from app.database.database import get_db
 from app.models.transaction import Transaction
-from app.schemas.transaction_schema import TransactionResponse, TransferRequest
+from app.models.partner import Partner
+from app.schemas.transaction_schema import TransactionResponse, TransferRequest, TransactionConfirmRequest
 from app.services import contact_service, otp_service, raast_service
 from app.services import response_templates as tmpl
 
@@ -55,10 +56,7 @@ def initiate_transfer(
 
 @router.post("/confirm")
 def confirm_transfer(
-    recipient_account: str,
-    recipient_name: str,
-    amount: float,
-    otp_code: str,
+    payload: TransactionConfirmRequest,
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -68,26 +66,31 @@ def confirm_transfer(
     lang = current_user.preferred_language or "ur"
 
     # Verify OTP
-    otp_result = otp_service.verify_otp(db, current_user.user_id, otp_code)
+    otp_result = otp_service.verify_otp(db, current_user.user_id, payload.otp_code)
     if not otp_result["success"]:
         raise HTTPException(status_code=400, detail=otp_result["reason"])
 
     # Execute transfer
     from decimal import Decimal
     try:
+        partner_id = current_user.partner_id
+        if not partner_id:
+            default_partner = db.query(Partner).first()
+            partner_id = default_partner.partner_id if default_partner else None
+
         txn = raast_service.initiate_transfer(
             db=db,
             sender_id=current_user.user_id,
-            recipient_account=recipient_account,
-            recipient_name=recipient_name,
-            amount=Decimal(str(amount)),
-            partner_id=current_user.partner_id or 1,
+            recipient_account=payload.recipient_account,
+            recipient_name=payload.recipient_name,
+            amount=payload.amount,
+            partner_id=partner_id,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     if txn.status.value == "completed":
-        msg = tmpl.transfer_success(recipient_name, str(amount), lang)
+        msg = tmpl.transfer_success(payload.recipient_name, str(payload.amount), lang)
     else:
         msg = tmpl.transfer_failed(lang)
 

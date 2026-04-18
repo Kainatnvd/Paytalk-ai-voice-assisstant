@@ -10,7 +10,7 @@ class UserRegisterRequest(BaseModel):
     email: Optional[EmailStr] = None
     password: str
     cnic: str                           # Plain CNIC – encrypted on save, never stored raw
-    partner_id: UUID
+    partner_id: Optional[UUID] = None
     preferred_language: Optional[str] = "ur"
 
     @field_validator("cnic")
@@ -32,6 +32,12 @@ class UserRegisterRequest(BaseModel):
 class UserLoginRequest(BaseModel):
     phone_number: str
     password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    phone_number: str
+    cnic: str
+    new_password: str
 
 
 class UserResponse(BaseModel):

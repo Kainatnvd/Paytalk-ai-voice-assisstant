@@ -15,6 +15,11 @@ dependencies:
   flutter_svg: ^2.0.10+1
   http: ^1.1.0
   provider: ^6.1.1
+  shared_preferences: ^2.5.5
+  record: ^6.2.0
+  path_provider: ^2.1.5
+  audioplayers: ^6.6.0
+  path: ^1.9.0
 
 dev_dependencies:
   flutter_test:
@@ -23,10 +28,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-#  fonts:
-#    - family: NotoNastaliqUrdu
-#      fonts:
-#        - asset: assets/fonts/NotoNastaliqUrdu-Regular.ttf
-#    - family: NotoSansArabic
-#      fonts:
-#        - asset: assets/fonts/NotoSansArabic-Regular.ttf

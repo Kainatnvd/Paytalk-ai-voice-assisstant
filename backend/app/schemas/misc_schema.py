@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel
 from uuid import UUID
 
@@ -13,8 +13,10 @@ class VoiceProcessResponse(BaseModel):
     entities: Optional[Dict[str, Any]]
     response_text: str
     response_audio: Optional[str]   # base64-encoded MP3
-    session_id: int
+    session_id: Union[int, UUID, str]
     processing_time_ms: int
+    dialogue_state: Optional[str] = "IDLE"
+    pending_action: Optional[Dict[str, Any]] = None
 
 
 # ─── NFC ──────────────────────────────────────────────────────────────────────

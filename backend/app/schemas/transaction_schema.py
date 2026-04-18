@@ -10,6 +10,12 @@ class TransferRequest(BaseModel):
     amount: Decimal
     note: Optional[str] = None
 
+class TransactionConfirmRequest(BaseModel):
+    recipient_account: str
+    recipient_name: str
+    amount: Decimal
+    otp_code: str
+
 
 class TransactionResponse(BaseModel):
     id: int
