@@ -7,3 +7,4 @@ rasa/models/
 backend/tests/audio_samples/
 rasa-venv/
 rasa/.rasa/
+backend/venv/

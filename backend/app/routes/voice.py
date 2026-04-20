@@ -161,8 +161,6 @@ async def process_voice(
                 }
                 dialogue_service.set_state(db, session_id, "AWAITING_CONFIRMATION", pending)
                 response_text = tmpl.confirm_transfer_prompt(contact.full_name, str(amount), lang)
-            else:
-                response_text = "Contact nahi mila. Naam dobara bolein." if lang == "ur" else "Contact not found. Please repeat the name."
 
             elif match_result["confidence"] == "low":
                 names = ", ".join([c.full_name for c in match_result["candidates"]])
@@ -171,6 +169,9 @@ async def process_voice(
                     if lang == "ur"
                     else f"Did you mean one of these? {names}. Please say the full name."
                 )
+
+            else:
+                response_text = "Contact nahi mila. Naam dobara bolein." if lang == "ur" else "Contact not found. Please repeat the name."
     else:
         response_text = tmpl.unknown_intent(lang)
 
