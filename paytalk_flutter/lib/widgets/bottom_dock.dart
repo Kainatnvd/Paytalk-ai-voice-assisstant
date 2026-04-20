@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
 /// Floating dock bottom navigation matching the wireframe dock-blur CSS.
-/// Glassmorphic pill with elevated center mic FAB.
+/// Glassmorphic pill with inline center mic redirect button.
 class AppFloatingDock extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
+
+  /// Global notifier to trigger mic scroll in DashboardScreen
+  static final ValueNotifier<int> micScrollNotifier = ValueNotifier<int>(0);
 
   const AppFloatingDock({
     super.key,
@@ -34,7 +37,6 @@ class AppFloatingDock extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _buildNavItem(0, Icons.dashboard_rounded, 'Dashboard'),
-          _buildDisabledNavItem(Icons.account_balance_wallet_rounded, 'Wallet'),
           _buildCenterMic(),
           _buildNavItem(2, Icons.history_rounded, 'History'),
           _buildNavItem(3, Icons.settings_rounded, 'Settings'),
@@ -60,37 +62,30 @@ class AppFloatingDock extends StatelessWidget {
     );
   }
 
-  Widget _buildDisabledNavItem(IconData icon, String label) {
-    return SizedBox(
-      width: 48,
-      height: 48,
-      child: Icon(
-        icon,
-        color: Colors.grey.withOpacity(0.3),
-        size: 26,
-      ),
-    );
-  }
-
+  /// Inline mic button — redirects to Dashboard and scrolls to the actual mic
   Widget _buildCenterMic() {
     return GestureDetector(
-      onTap: () => onTap(0), // Goes to dashboard (voice assistant)
+      onTap: () {
+        onTap(0); // Navigate to dashboard tab
+        micScrollNotifier.value++; // Trigger scroll to mic viewport
+      },
       child: Container(
-        width: 56,
-        height: 56,
-        margin: const EdgeInsets.only(bottom: 20),
+        width: 50,
+        height: 50,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          shape: BoxShape.circle,
           gradient: AppColors.primaryGradient,
           boxShadow: [
             BoxShadow(
               color: AppColors.primary.withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: const Icon(Icons.mic, color: Colors.white, size: 28),
+        child: const Center(
+          child: Icon(Icons.mic, color: Colors.white, size: 26),
+        ),
       ),
     );
   }

@@ -17,6 +17,7 @@ class VoiceProcessResponse(BaseModel):
     processing_time_ms: int
     dialogue_state: Optional[str] = "IDLE"
     pending_action: Optional[Dict[str, Any]] = None
+    payload: Optional[Dict[str, Any]] = None
 
 
 # ─── NFC ──────────────────────────────────────────────────────────────────────

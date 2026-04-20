@@ -1,12 +1,31 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/transaction.dart';
 
 /// Full API service integrating with PayTalk FastAPI backend.
 /// Endpoints: /auth, /account, /transaction, /voice
-class ApiService {
+class ApiService extends ChangeNotifier {
+  /// Static notifier to trigger global UI refreshes
+  static final ValueNotifier<int> refreshNotifier = ValueNotifier<int>(0);
+
+  ApiService() {
+    // When the static notifier changes, notify all instance listeners
+    refreshNotifier.addListener(notifyListeners);
+  }
+
+  @override
+  void dispose() {
+    refreshNotifier.removeListener(notifyListeners);
+    super.dispose();
+  }
+
+  /// Increment this to notify all listeners watching refreshNotifier
+  static void refresh() {
+    refreshNotifier.value++;
+  }
   // Use http://10.0.2.2:8000 for Android Emulator
   // Use http://localhost:8000 for Web / Windows / iOS Simulator
   static const String baseUrl = 'http://localhost:8000';
@@ -35,6 +54,8 @@ class ApiService {
             'user_name', data['user']['full_name'] ?? 'User');
         await prefs.setString(
             'user_phone', data['user']['phone_number'] ?? '');
+        
+        refresh(); // Notify listeners that user state has changed
         return {'status': 'success', 'data': data};
       } else {
         return {
@@ -280,6 +301,7 @@ class ApiService {
       );
       final data = json.decode(response.body);
       if (response.statusCode == 200) {
+        refresh(); // Refresh balance and history across screens
         return {'status': 'success', 'data': data};
       } else {
         return {

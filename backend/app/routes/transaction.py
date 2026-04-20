@@ -42,7 +42,22 @@ def initiate_transfer(
 
     contact = match_result["contact"]
 
-    # Step 2: Return confirmation prompt (BR-005: explicit confirmation required)
+    # Step 2: Balance check
+    from sqlalchemy import func as sqlfunc
+    baseline = 50000.00
+    total_spent = db.query(sqlfunc.sum(Transaction.amount)).filter(
+        Transaction.sender_id == current_user.user_id,
+        Transaction.status == "completed"
+    ).scalar() or 0.0
+    current_balance = float(baseline) - float(total_spent)
+
+    if float(payload.amount) > current_balance:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient balance. Available: PKR {current_balance:,.2f}"
+        )
+
+    # Step 3: Return confirmation prompt (BR-005: explicit confirmation required)
     return {
         "status": "awaiting_confirmation",
         "message": tmpl.confirm_transfer_prompt(contact.full_name, str(payload.amount), lang),

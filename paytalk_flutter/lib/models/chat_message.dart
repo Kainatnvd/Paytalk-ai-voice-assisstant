@@ -4,10 +4,12 @@ class ChatMessage {
   final String text;
   final MessageSender sender;
   final DateTime timestamp;
+  final Map<String, dynamic>? payload;
 
   ChatMessage({
     required this.text,
     required this.sender,
     required this.timestamp,
+    this.payload,
   });
 }

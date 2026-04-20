@@ -37,10 +37,12 @@ app.include_router(admin.router)
 @app.on_event("startup")
 async def startup_event():
     print("[PayTalk] Starting up...")
-    # get_model()  # Commented out to prevent hang during startup
+    get_model()  # Pre-load Whisper at startup
     print("[PayTalk] Ready.")
 
 
 @app.get("/", tags=["Health"])
 def health_check():
     return {"status": "ok", "service": "PayTalk API", "version": "1.0.0"}
+
+# Verified: Whisper=Small, TTS=Piper, NLU=Gemini-1.5

@@ -481,12 +481,28 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildFooter() {
-    return Text(
-      '© 2024 PAYTALK INTELLIGENCE SYSTEMS. ALL RIGHTS RESERVED.',
-      style: AppTypography.caption.copyWith(
-        color: AppColors.primary.withOpacity(0.4),
-        fontSize: 11,
-      ),
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.support_agent, color: AppColors.primary, size: 16),
+            const SizedBox(width: 8),
+            Text(
+              'Helpline: 0800-PAYTALK',
+              style: AppTypography.labelLarge.copyWith(color: AppColors.primary, fontSize: 13),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          '© 2024 PAYTALK INTELLIGENCE SYSTEMS. ALL RIGHTS RESERVED.',
+          style: AppTypography.caption.copyWith(
+            color: AppColors.primary.withOpacity(0.4),
+            fontSize: 11,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -6,19 +6,27 @@ class MockData {
   static List<Transaction> get transactions => [
         Transaction(
           id: '1',
-          title: 'Apple Store',
+          title: 'Electricity Bill',
           date: 'Oct 24, 2023 • 02:15 PM',
-          amount: 1299.00,
+          amount: 12500.00,
           status: 'COMPLETED',
           type: TransactionType.expense,
         ),
         Transaction(
           id: '2',
-          title: 'Salary Deposit',
+          title: 'Water Bill',
           date: 'Oct 23, 2023 • 09:00 AM',
-          amount: 8450.00,
+          amount: 1200.00,
           status: 'COMPLETED',
-          type: TransactionType.income,
+          type: TransactionType.expense,
+        ),
+        Transaction(
+          id: '3',
+          title: 'Gas Bill',
+          date: 'Oct 22, 2023 • 11:30 AM',
+          amount: 3500.00,
+          status: 'COMPLETED',
+          type: TransactionType.expense,
         ),
       ];
 

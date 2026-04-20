@@ -27,10 +27,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _fetchData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh data whenever the route changes (e.g. returning to this tab)
+    _fetchData();
+  }
+
+  @override
+  void dispose() {
+    _apiService.removeListener(_onGlobalRefresh);
+    _apiService.dispose();
+    super.dispose();
+  }
+
+  void _onGlobalRefresh() {
+    _fetchData();
+  }
+
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
     final balanceResult = await _apiService.getBalance();
     final transactionsResult = await _apiService.getTransactions();
+
+    _apiService.addListener(_onGlobalRefresh);
 
     if (mounted) {
       setState(() {
@@ -65,43 +85,50 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
 
           SafeArea(
-            child: RefreshIndicator(
-              color: AppColors.primary,
-              onRefresh: _fetchData,
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  // ── Sticky Header ──
-                  SliverToBoxAdapter(child: _buildHeader()),
-                  // ── Content ──
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 24),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        const SizedBox(height: 16),
-                        _buildSectionTitle('Recent Activity'),
-                        const SizedBox(height: 16),
-                        _isLoading
-                            ? const Center(
-                                child: Padding(
-                                padding: EdgeInsets.all(48),
-                                child: CircularProgressIndicator(
-                                    color: AppColors.primary),
-                              ))
-                            : _buildTransactionList(),
-                        const SizedBox(height: 40),
-                        _buildSectionTitle('Dashboard Bento'),
-                        const SizedBox(height: 16),
-                        _buildBentoGrid(),
-                        const SizedBox(height: 40),
-                        _buildFooter(),
-                        const SizedBox(height: 120),
-                      ]),
-                    ),
+            child: ValueListenableBuilder<int>(
+              valueListenable: ApiService.refreshNotifier,
+              builder: (context, refreshCount, _) {
+                // Trigger fetch if the notifier changes
+                // Note: initState/didChangeDependencies already handle initial load
+                return RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: _fetchData,
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      // ── Sticky Header ──
+                      SliverToBoxAdapter(child: _buildHeader()),
+                      // ── Content ──
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 24),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            const SizedBox(height: 16),
+                            _buildSectionTitle('Recent Activity'),
+                            const SizedBox(height: 16),
+                            _isLoading
+                                ? const Center(
+                                    child: Padding(
+                                    padding: EdgeInsets.all(48),
+                                    child: CircularProgressIndicator(
+                                        color: AppColors.primary),
+                                  ))
+                                : _buildTransactionList(),
+                            const SizedBox(height: 40),
+                            _buildSectionTitle('Dashboard Bento'),
+                            const SizedBox(height: 16),
+                            _buildBentoGrid(),
+                            const SizedBox(height: 40),
+                            _buildFooter(),
+                            const SizedBox(height: 120),
+                          ]),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -328,198 +355,44 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  /// Bento grid matching wireframe: large spending insights card + 2 smaller cards
+  /// Bento grid: spending insights card with dynamic chart
   Widget _buildBentoGrid() {
-    return Column(
-      children: [
-        // ── Large Spending Insights Card ──
-        BentoCard(
-          padding: const EdgeInsets.all(28),
-          borderRadius: 32,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'MONTHLY TREND',
-                style: AppTypography.caption.copyWith(
-                  color: AppColors.primary,
-                  letterSpacing: 3,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text('Spending Insights',
-                  style: AppTypography.headlineLarge
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: 8),
-              Text(
-                "You've spent 12% less than last month. Keep it up for your savings goal.",
-                style: AppTypography.bodyMedium
-                    .copyWith(color: Colors.indigo.shade300),
-              ),
-              const SizedBox(height: 28),
-              // Bar chart
-              SizedBox(
-                height: 120,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: List.generate(7, (index) {
-                    final heights = [0.4, 0.6, 1.0, 0.75, 0.55, 0.45, 0.85];
-                    bool isHighlight = index == 2;
-                    return Expanded(
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        height: 120 * heights[index],
-                        decoration: BoxDecoration(
-                          color: isHighlight
-                              ? AppColors.primary
-                              : AppColors.primaryContainer,
-                          borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(12)),
-                          boxShadow: isHighlight
-                              ? [
-                                  BoxShadow(
-                                    color: AppColors.primary
-                                        .withOpacity(0.2),
-                                    blurRadius: 20,
-                                  )
-                                ]
-                              : null,
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-              ),
-            ],
+    return BentoCard(
+      padding: const EdgeInsets.all(28),
+      borderRadius: 32,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'MONTHLY TREND',
+            style: AppTypography.caption.copyWith(
+              color: AppColors.primary,
+              letterSpacing: 3,
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-
-        // ── Two smaller cards ──
-        Row(
-          children: [
-            // Smart Assistant card
-            Expanded(
-              child: BentoCard(
-                padding: const EdgeInsets.all(24),
-                borderRadius: 32,
-                color: AppColors.surfaceContainer,
-                glassBorder: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'SMART ASSISTANT',
-                                style:
-                                    AppTypography.caption.copyWith(
-                                  color: AppColors.primary,
-                                  letterSpacing: 3,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'October\nSummary',
-                                style: AppTypography.headlineMedium
-                                    .copyWith(
-                                        fontSize: 18, height: 1.3),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.primaryContainer,
-                          ),
-                          child: const Icon(Icons.graphic_eq,
-                              color: AppColors.primary, size: 20),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Text(
-                          'Generate Voice Report',
-                          style: AppTypography.labelMedium.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.arrow_forward,
-                            size: 14, color: AppColors.primary),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-
-            // AI Ready mic card
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F3FF).withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(color: AppColors.outline),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Gradient ring mic icon
-                    Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: AppColors.primaryGradient,
-                      ),
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                        ),
-                        child: const Icon(Icons.mic,
-                            color: AppColors.primary, size: 28),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Ask "How much for coffee?"',
-                      style: AppTypography.headlineSmall
-                          .copyWith(fontSize: 13),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'AI READY',
-                      style: AppTypography.caption.copyWith(
-                        color: Colors.indigo.shade300,
-                        fontSize: 9,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
+          const SizedBox(height: 8),
+          Text('Spending Insights',
+              style: AppTypography.headlineLarge
+                  .copyWith(fontSize: 26)),
+          const SizedBox(height: 8),
+          Text(
+            _getInsightText(),
+            style: AppTypography.bodyMedium
+                .copyWith(color: Colors.indigo.shade300),
+          ),
+          const SizedBox(height: 28),
+          // Dynamic bar chart from actual transactions
+          SizedBox(
+            height: 140,
+            child: _transactions.isEmpty
+                ? Center(
+                    child: Text('No transactions yet',
+                        style: AppTypography.bodySmall
+                            .copyWith(color: Colors.indigo.shade300)))
+                : _buildDynamicChart(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -559,6 +432,78 @@ class _HistoryScreenState extends State<HistoryScreen> {
         color: Colors.indigo.shade200,
         fontSize: 11,
       ),
+    );
+  }
+
+  String _getInsightText() {
+    if (_transactions.isEmpty) return 'No transactions recorded yet.';
+    final expenses = _transactions.where((t) => t.type == TransactionType.expense);
+    final totalSpent = expenses.fold<double>(0.0, (sum, t) => sum + t.amount);
+    final income = _transactions.where((t) => t.type == TransactionType.income);
+    final totalReceived = income.fold<double>(0.0, (sum, t) => sum + t.amount);
+    return 'Total spent: $_currency ${totalSpent.toStringAsFixed(0)} · Received: $_currency ${totalReceived.toStringAsFixed(0)} across ${_transactions.length} transactions.';
+  }
+
+  Widget _buildDynamicChart() {
+    final recentTx = _transactions.take(7).toList();
+    final maxAmount = recentTx.map((t) => t.amount).reduce((a, b) => a > b ? a : b);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: List.generate(recentTx.length, (index) {
+        final tx = recentTx[index];
+        final normalizedHeight = maxAmount > 0 ? (tx.amount / maxAmount) : 0.5;
+        final isMax = tx.amount == maxAmount;
+        final isExpense = tx.type == TransactionType.expense;
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  '${(tx.amount / 1000).toStringAsFixed(1)}k',
+                  style: AppTypography.caption.copyWith(
+                    fontSize: 8,
+                    color: isMax ? AppColors.primary : Colors.indigo.shade300,
+                    fontWeight: isMax ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  height: 100 * normalizedHeight.clamp(0.08, 1.0),
+                  decoration: BoxDecoration(
+                    color: isMax
+                        ? AppColors.primary
+                        : isExpense
+                            ? AppColors.primaryContainer
+                            : AppColors.primary.withOpacity(0.3),
+                    borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(8)),
+                    boxShadow: isMax
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.2),
+                              blurRadius: 12,
+                            )
+                          ]
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  tx.title.length > 5 ? tx.title.substring(0, 5) : tx.title,
+                  style: AppTypography.caption.copyWith(
+                    fontSize: 7,
+                    color: Colors.indigo.shade300,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
     );
   }
 }

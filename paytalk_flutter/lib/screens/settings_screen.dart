@@ -4,7 +4,7 @@ import '../theme/app_typography.dart';
 import '../widgets/bento_card.dart';
 import '../services/api_service.dart';
 
-/// Settings Screen — profile info, language toggle, and account management.
+/// Settings Screen — profile info and account management.
 /// Clean bento-style layout matching the Ethereal Professional design system.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,7 +17,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final ApiService _apiService = ApiService();
   String _userName = 'User';
   String _phone = '';
-  String _language = 'EN';
   bool _isLoading = true;
 
   @override
@@ -34,7 +33,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _userName = name ?? info['full_name'] ?? 'User';
         _phone = info['phone_number'] ?? '';
-        _language = (info['preferred_language'] ?? 'en') == 'ur' ? 'UR' : 'EN';
         _isLoading = false;
       });
     }
@@ -145,52 +143,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // ── Language Toggle ──
-                    BentoCard(
-                      padding: const EdgeInsets.all(20),
-                      borderRadius: 20,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(Icons.translate,
-                                    color: AppColors.primary, size: 20),
-                              ),
-                              const SizedBox(width: 16),
-                              Text('Language',
-                                  style: AppTypography.headlineSmall
-                                      .copyWith(fontSize: 16)),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceContainer,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
+                    // ── Menu Items ──
+                    _buildMenuItem(
+                      Icons.security, 
+                      'Security', 
+                      'PIN settings',
+                      onTap: () {
+                        Navigator.pushNamed(context, '/security-settings');
+                      },
+                    ),
+                    _buildMenuItem(
+                      Icons.notifications_outlined, 
+                      'Notifications', 
+                      'Push & SMS alerts',
+                      onTap: () => Navigator.pushNamed(context, '/notification-settings'),
+                    ),
+                    _buildMenuItem(
+                      Icons.help_outline, 
+                      'Help & Support', 
+                      'FAQ & contact us',
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                            title: Text('Help & Support', style: AppTypography.headlineMedium, textAlign: TextAlign.center),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                _buildLangChip('EN', _language == 'EN'),
-                                _buildLangChip('UR', _language == 'UR'),
+                                const Icon(Icons.support_agent, size: 64, color: AppColors.primary),
+                                const SizedBox(height: 16),
+                                Text('Contact PayTalk Team', style: AppTypography.headlineSmall),
+                                const SizedBox(height: 8),
+                                Text('If you have any issues, please call our 24/7 helpline below:', 
+                                    textAlign: TextAlign.center, 
+                                    style: AppTypography.bodyMedium),
+                                const SizedBox(height: 24),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryContainer,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text('0800-PAYTALK', 
+                                          style: AppTypography.headlineMedium.copyWith(color: AppColors.primary)),
+                                      const SizedBox(height: 4),
+                                      Text('(0800-7298255)', 
+                                          style: AppTypography.bodyMedium.copyWith(color: AppColors.primary)),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text('Close',
+                                    style: AppTypography.labelLarge.copyWith(color: AppColors.textMuted)),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                    const SizedBox(height: 12),
-
-                    // ── Menu Items ──
-                    _buildMenuItem(Icons.security, 'Security', 'Biometric & PIN settings'),
-                    _buildMenuItem(Icons.notifications_outlined, 'Notifications', 'Push & SMS alerts'),
-                    _buildMenuItem(Icons.help_outline, 'Help & Support', 'FAQ & contact us'),
                     _buildMenuItem(Icons.info_outline, 'About PayTalk', 'Version 1.0.0'),
                     const SizedBox(height: 24),
 
@@ -222,58 +239,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildLangChip(String label, bool isActive) {
-    return GestureDetector(
-      onTap: () => setState(() => _language = label),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          color: isActive ? AppColors.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          label,
-          style: AppTypography.labelMedium.copyWith(
-            color: isActive ? Colors.white : Colors.indigo.shade300,
-            fontSize: 11,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuItem(IconData icon, String title, String subtitle) {
+  Widget _buildMenuItem(IconData icon, String title, String subtitle, {VoidCallback? onTap}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: BentoCard(
-        padding: const EdgeInsets.all(16),
-        borderRadius: 16,
-        glassBorder: false,
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(12),
+      child: GestureDetector(
+        onTap: onTap,
+        child: BentoCard(
+          padding: const EdgeInsets.all(16),
+          borderRadius: 16,
+          glassBorder: false,
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 20),
               ),
-              child: Icon(icon, color: AppColors.primary, size: 20),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: AppTypography.headlineSmall.copyWith(fontSize: 15)),
-                  Text(subtitle,
-                      style: AppTypography.bodySmall
-                          .copyWith(color: Colors.indigo.shade300, fontSize: 12)),
-                ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: AppTypography.headlineSmall.copyWith(fontSize: 15)),
+                    Text(subtitle,
+                        style: AppTypography.bodySmall
+                            .copyWith(color: Colors.indigo.shade300, fontSize: 12)),
+                  ],
+                ),
               ),
-            ),
-            Icon(Icons.chevron_right, color: Colors.indigo.shade200, size: 22),
-          ],
+              Icon(Icons.chevron_right, color: Colors.indigo.shade200, size: 22),
+            ],
+          ),
         ),
       ),
     );
