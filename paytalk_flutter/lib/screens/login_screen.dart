@@ -101,7 +101,20 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: AnimatedGradientBlob(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFd4ceff), // lightest lavender
+              Color(0xFFa899f5), // soft purple
+              Color(0xFF7b70e0), // medium purple
+              Color(0xFF7b6fbf), // deep muted purple
+            ],
+            stops: [0.0, 0.35, 0.7, 1.0],
+          ),
+        ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -137,14 +150,13 @@ class _LoginScreenState extends State<LoginScreen> {
         Text(
           'PayTalk',
           style: AppTypography.displayLarge
-              .copyWith(color: AppColors.primary, fontSize: 36),
+              .copyWith(color: const Color(0xFF1c1060), fontSize: 40),
         ),
         const SizedBox(height: 4),
         Text(
-          'NEXT-GEN FINANCIAL LEDGER',
-          style: AppTypography.caption.copyWith(
-            color: AppColors.onSurfaceVariant.withOpacity(0.7),
-          ),
+          'AI-POWERED VOICE BANKING',
+          style: AppTypography.caption
+              .copyWith(color: const Color(0xFF1c1060), fontSize: 14),
         ),
       ],
     );
@@ -167,10 +179,13 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           // ── Header ──
           Text(_isRegistering ? 'Create Account' : 'Secure Login',
-              style: AppTypography.displayLarge.copyWith(fontSize: 32)),
+              style: AppTypography.displayLarge
+                  .copyWith(fontSize: 27, color: const Color(0xFF1c1060))),
           const SizedBox(height: 8),
           Text(
-            _isRegistering ? 'Register to create your secure wallet.' : 'Enter your credentials to access your secure conduit.',
+            _isRegistering
+                ? 'Register to create your secure account.'
+                : 'Enter your credentials to access your secure account.',
             style: AppTypography.bodyMedium,
           ),
           const SizedBox(height: 32),
@@ -179,17 +194,19 @@ class _LoginScreenState extends State<LoginScreen> {
             Text('Full Name',
                 style: AppTypography.labelLarge.copyWith(fontSize: 14)),
             const SizedBox(height: 8),
-            _buildTextField(_nameController, Icons.person, 'John Doe', TextInputType.name),
+            _buildTextField(
+                _nameController, Icons.person, 'John Doe', TextInputType.name),
             const SizedBox(height: 24),
             Text('CNIC (13 digits)',
                 style: AppTypography.labelLarge.copyWith(fontSize: 14)),
             const SizedBox(height: 8),
-            _buildTextField(_cnicController, Icons.credit_card, '4210112345678', TextInputType.number),
+            _buildTextField(_cnicController, Icons.credit_card, '4210112345678',
+                TextInputType.number),
             const SizedBox(height: 24),
           ],
 
           // ── Phone Field ──
-          Text('Phone number',
+          Text('Contact Number',
               style: AppTypography.labelLarge.copyWith(fontSize: 14)),
           const SizedBox(height: 8),
           _buildPhoneField(),
@@ -229,22 +246,20 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               Expanded(
                   child: Container(
-                      height: 1,
-                      color: AppColors.primary.withOpacity(0.1))),
+                      height: 1, color: AppColors.primary.withOpacity(0.1))),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  'SECURE CONNECTION',
+                  'SIGN UP',
                   style: AppTypography.caption.copyWith(
-                    color: AppColors.primary.withOpacity(0.4),
+                    color: AppColors.onSurface.withOpacity(0.5),
                     fontSize: 10,
                   ),
                 ),
               ),
               Expanded(
                   child: Container(
-                      height: 1,
-                      color: AppColors.primary.withOpacity(0.1))),
+                      height: 1, color: AppColors.primary.withOpacity(0.1))),
             ],
           ),
           const SizedBox(height: 16),
@@ -254,7 +269,10 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(_isRegistering ? 'Already have an account? ' : 'New to the conduit? ',
+                Text(
+                    _isRegistering
+                        ? 'Already have an account? '
+                        : 'New to PayTalk? ',
                     style: AppTypography.bodyMedium.copyWith(fontSize: 14)),
                 GestureDetector(
                   onTap: () => setState(() => _isRegistering = !_isRegistering),
@@ -284,11 +302,9 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: InputDecoration(
         prefixIcon: Padding(
           padding: const EdgeInsets.only(left: 16, right: 12),
-          child:
-              Icon(Icons.phone_iphone, color: AppColors.primary, size: 20),
+          child: Icon(Icons.phone_iphone, color: AppColors.primary, size: 20),
         ),
-        prefixIconConstraints:
-            const BoxConstraints(minWidth: 48, minHeight: 0),
+        prefixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 0),
         hintText: '+92 300 1234567',
         hintStyle: AppTypography.bodyLarge
             .copyWith(color: AppColors.primary.withOpacity(0.3)),
@@ -298,13 +314,11 @@ class _LoginScreenState extends State<LoginScreen> {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide:
-              BorderSide(color: AppColors.primary.withOpacity(0.1)),
+          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.1)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide:
-              BorderSide(color: AppColors.primary.withOpacity(0.1)),
+          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.1)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
@@ -315,7 +329,8 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, IconData icon, String hint, TextInputType type) {
+  Widget _buildTextField(TextEditingController controller, IconData icon,
+      String hint, TextInputType type) {
     return TextField(
       controller: controller,
       keyboardType: type,
@@ -325,8 +340,7 @@ class _LoginScreenState extends State<LoginScreen> {
           padding: const EdgeInsets.only(left: 16, right: 12),
           child: Icon(icon, color: AppColors.primary, size: 20),
         ),
-        prefixIconConstraints:
-            const BoxConstraints(minWidth: 48, minHeight: 0),
+        prefixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 0),
         hintText: hint,
         hintStyle: AppTypography.bodyLarge
             .copyWith(color: AppColors.primary.withOpacity(0.3)),
@@ -336,13 +350,11 @@ class _LoginScreenState extends State<LoginScreen> {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide:
-              BorderSide(color: AppColors.primary.withOpacity(0.1)),
+          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.1)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide:
-              BorderSide(color: AppColors.primary.withOpacity(0.1)),
+          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.1)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
@@ -363,24 +375,19 @@ class _LoginScreenState extends State<LoginScreen> {
           padding: const EdgeInsets.only(left: 16, right: 12),
           child: Icon(Icons.lock, color: AppColors.primary, size: 20),
         ),
-        prefixIconConstraints:
-            const BoxConstraints(minWidth: 48, minHeight: 0),
+        prefixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 0),
         suffixIcon: GestureDetector(
-          onTap: () =>
-              setState(() => _obscurePassword = !_obscurePassword),
+          onTap: () => setState(() => _obscurePassword = !_obscurePassword),
           child: Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Icon(
-              _obscurePassword
-                  ? Icons.visibility_off
-                  : Icons.visibility,
+              _obscurePassword ? Icons.visibility_off : Icons.visibility,
               color: AppColors.primary.withOpacity(0.6),
               size: 20,
             ),
           ),
         ),
-        suffixIconConstraints:
-            const BoxConstraints(minWidth: 48, minHeight: 0),
+        suffixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 0),
         hintText: '••••••••••••',
         hintStyle: AppTypography.bodyLarge
             .copyWith(color: AppColors.primary.withOpacity(0.3)),
@@ -390,13 +397,11 @@ class _LoginScreenState extends State<LoginScreen> {
             const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide:
-              BorderSide(color: AppColors.primary.withOpacity(0.1)),
+          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.1)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide:
-              BorderSide(color: AppColors.primary.withOpacity(0.1)),
+          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.1)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
@@ -427,8 +432,8 @@ class _LoginScreenState extends State<LoginScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(32)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
         ),
         child: _isLoading
             ? const SizedBox(
@@ -439,7 +444,7 @@ class _LoginScreenState extends State<LoginScreen> {
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(_isRegistering ? 'Register' : 'Access Vault',
+                  Text(_isRegistering ? 'Register' : 'Login',
                       style: AppTypography.headlineSmall
                           .copyWith(color: Colors.white)),
                   const SizedBox(width: 8),
@@ -452,11 +457,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildSecurityBadges() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 24,
+      runSpacing: 8,
       children: [
         _buildBadge(Icons.verified_user, 'END-TO-END ENCRYPTION'),
-        const SizedBox(width: 24),
         _buildBadge(Icons.public, 'GLOBAL STANDARDS'),
       ],
     );
@@ -466,13 +472,12 @@ class _LoginScreenState extends State<LoginScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon,
-            color: AppColors.primary.withOpacity(0.6), size: 18),
+        Icon(icon, color: Colors.white.withOpacity(0.7), size: 18),
         const SizedBox(width: 6),
         Text(
           text,
           style: AppTypography.caption.copyWith(
-            color: AppColors.primary.withOpacity(0.6),
+            color: Colors.white.withOpacity(0.9),
             fontSize: 10,
           ),
         ),
@@ -486,19 +491,20 @@ class _LoginScreenState extends State<LoginScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.support_agent, color: AppColors.primary, size: 16),
+            const Icon(Icons.support_agent, color: Colors.white, size: 16),
             const SizedBox(width: 8),
             Text(
               'Helpline: 0800-PAYTALK',
-              style: AppTypography.labelLarge.copyWith(color: AppColors.primary, fontSize: 13),
+              style: AppTypography.labelLarge
+                  .copyWith(color: Colors.white, fontSize: 13),
             ),
           ],
         ),
         const SizedBox(height: 16),
         Text(
-          '© 2024 PAYTALK INTELLIGENCE SYSTEMS. ALL RIGHTS RESERVED.',
+          '© 2026 PayTalk Intelligent Systems. All rights reserved.',
           style: AppTypography.caption.copyWith(
-            color: AppColors.primary.withOpacity(0.4),
+            color: Colors.white.withOpacity(0.7),
             fontSize: 11,
           ),
         ),
