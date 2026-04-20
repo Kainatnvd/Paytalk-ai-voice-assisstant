@@ -56,3 +56,10 @@ def unknown_intent(lang: str = "ur") -> str:
     if lang == "en":
         return "Sorry, I did not understand that. Please try again."
     return "Maafi chahta hoon, mujhe samajh nahi aaya. Dobara bolein."
+
+
+def insufficient_balance(balance: str, amount: str, lang: str = "ur") -> str:
+    if lang == "en":
+        return f"Insufficient balance. Your balance is PKR {balance} but you are trying to send PKR {amount}."
+    return f"Aapka balance kafi nahi hai. Aapka balance {balance} rupay hai lekin aap {amount} rupay bhejna chahte hain."
+

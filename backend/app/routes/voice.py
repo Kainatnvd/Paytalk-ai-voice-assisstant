@@ -71,6 +71,7 @@ async def process_voice(
     state = dialogue["state"]
 
     response_text = ""
+    response_payload = None
 
     # ── 5. Intent handler ─────────────────────────────────────────────────────
     # If it's a new primary command, reset any stuck state
@@ -80,7 +81,7 @@ async def process_voice(
 
     if intent == "cancel":
         dialogue_service.reset_state(db, session_id)
-        response_text = "Theek hai, cancel kar diya." if lang == "ur" else "Cancelled."
+        response_text = "Theek hai, cancel kar diya." if detected_lang == "ur" else "Cancelled."
 
     elif state == "AWAITING_OTP":
         # User is expected to speak the OTP
@@ -104,7 +105,7 @@ async def process_voice(
                     partner_id=partner_id,
                 )
                 dialogue_service.reset_state(db, session_id)
-                response_text = tmpl.transfer_success(pending["recipient_name"], pending["amount"], lang)
+                response_text = tmpl.transfer_success(pending["recipient_name"], pending["amount"], detected_lang)
             except ValueError as e:
                 dialogue_service.reset_state(db, session_id)
                 response_text = str(e)
@@ -116,10 +117,10 @@ async def process_voice(
             pending = dialogue["pending_action"] or {}
             otp_service.send_otp(db, current_user.user_id, current_user.phone_number)
             dialogue_service.set_state(db, session_id, "AWAITING_OTP", pending)
-            response_text = tmpl.otp_sent(lang)
+            response_text = tmpl.otp_sent(detected_lang)
         else:
             dialogue_service.reset_state(db, session_id)
-            response_text = "Theek hai, transaction cancel kar diya." if lang == "ur" else "Transaction cancelled."
+            response_text = "Theek hai, transaction cancel kar diya." if detected_lang == "ur" else "Transaction cancelled."
 
     elif intent == "check_balance":
         baseline = 50000.00
@@ -131,49 +132,66 @@ async def process_voice(
         current_balance = float(baseline) - float(total_spent)
         formatted_balance = f"{current_balance:,.2f}"
         
-        response_text = tmpl.balance_response(formatted_balance, lang)
+        response_text = tmpl.balance_response(formatted_balance, detected_lang)
 
     elif intent == "transaction_history":
-        response_text = tmpl.transaction_history_intro(5, lang)
+        from sqlalchemy import or_
+        filter_condition = Transaction.sender_id == current_user.user_id
+        if current_user.account_number:
+            filter_condition = or_(filter_condition, Transaction.recipient_account == current_user.account_number)
+            
+        history = db.query(Transaction).filter(filter_condition).order_by(Transaction.created_at.desc()).limit(5).all()
+        
+        history_list = []
+        for t in history:
+            history_list.append({
+                "type": "sent" if t.sender_id == current_user.user_id else "received",
+                "amount": float(t.amount),
+                "status": t.status,
+                "date": t.created_at.isoformat() if t.created_at else None
+            })
+
+        response_payload = {"transactions": history_list}
+        response_text = tmpl.transaction_history_intro(len(history), detected_lang)
 
     elif intent == "get_account_info":
         acc = current_user.account_number or "N/A"
-        response_text = f"Aapka account number {acc} hai." if lang == "ur" else f"Your account number is {acc}."
+        response_text = f"Aapka account number {acc} hai." if detected_lang == "ur" else f"Your account number is {acc}."
 
     elif intent == "transfer_money":
         recipient_query = entities.get("recipient", "")
         amount = entities.get("amount", 0)
 
         if not recipient_query or not amount:
-            response_text = "Please batayein: kise aur kitne rupay bhejna hai?" if lang == "ur" else "Please specify recipient and amount."
+            response_text = "Please batayein: kise aur kitne rupay bhejna hai?" if detected_lang == "ur" else "Please specify recipient and amount."
         else:
-            match_result = contact_service.find_contact_for_user(db, current_user.user_id, recipient_query)
+            # ── Balance check before proceeding ──
+            baseline = 50000.00
+            total_spent = db.query(func.sum(Transaction.amount)).filter(
+                Transaction.sender_id == current_user.user_id,
+                Transaction.status == "completed"
+            ).scalar() or 0.0
+            current_balance = float(baseline) - float(total_spent)
 
-            if not match_result["matched"]:
-                response_text = "Contact nahi mila. Naam dobara bolein." if lang == "ur" else "Contact not found. Please repeat the name."
-
-            elif match_result["confidence"] == "high":
-                contact = match_result["contact"]
-                pending = {
-                    "recipient_name": contact.full_name,
-                    "recipient_account": contact.account_number_masked,
-                    "amount": str(amount),
-                }
-                dialogue_service.set_state(db, session_id, "AWAITING_CONFIRMATION", pending)
-                response_text = tmpl.confirm_transfer_prompt(contact.full_name, str(amount), lang)
-
-            elif match_result["confidence"] == "low":
-                names = ", ".join([c.full_name for c in match_result["candidates"]])
-                response_text = (
-                    f"Kya aap in mein se kisi ko bhejna chahte hain? {names}"
-                    if lang == "ur"
-                    else f"Did you mean one of these? {names}. Please say the full name."
-                )
-
+            if float(amount) > current_balance:
+                formatted_balance = f"{current_balance:,.2f}"
+                response_text = tmpl.insufficient_balance(formatted_balance, str(amount), detected_lang)
             else:
-                response_text = "Contact nahi mila. Naam dobara bolein." if lang == "ur" else "Contact not found. Please repeat the name."
+                match_result = contact_service.find_contact_for_user(db, current_user.user_id, recipient_query)
+                if match_result["matched"]:
+                    contact = match_result["contact"]
+                    pending = {
+                        "recipient_name": contact.full_name,
+                        "recipient_account": contact.account_number_masked,
+                        "amount": str(amount),
+                    }
+                    dialogue_service.set_state(db, session_id, "AWAITING_CONFIRMATION", pending)
+                    response_text = tmpl.confirm_transfer_prompt(contact.full_name, str(amount), detected_lang)
+                else:
+                    response_text = "Contact nahi mila. Naam dobara bolein." if detected_lang == "ur" else "Contact not found. Please repeat the name."
+
     else:
-        response_text = tmpl.unknown_intent(lang)
+        response_text = tmpl.unknown_intent(detected_lang)
 
     # ── 6. Generate TTS response ──────────────────────────────────────────────
     response_audio_b64 = tts_service.generate_voice_response_base64(response_text, detected_lang)
@@ -206,4 +224,5 @@ async def process_voice(
         processing_time_ms=elapsed_ms,
         dialogue_state=dialogue_service.get_state(db, session_id)["state"] if session_id else "IDLE",
         pending_action=dialogue_service.get_state(db, session_id)["pending_action"] if session_id else None,
+        payload=response_payload,
     )

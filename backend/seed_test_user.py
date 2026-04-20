@@ -93,7 +93,25 @@ def create_test_user():
                 status=TransactionStatus.completed,
                 initiated_via="api"
             )
-            db.add_all([tx1, tx2, tx3, tx4])
+            tx5 = Transaction(
+                sender_id=u_id,
+                recipient_account="PK12WTRB11223344",
+                recipient_name="Water Bill",
+                amount=Decimal("1200.00"),
+                currency="PKR",
+                status=TransactionStatus.completed,
+                initiated_via="voice"
+            )
+            tx6 = Transaction(
+                sender_id=u_id,
+                recipient_account="PK12GASB55667788",
+                recipient_name="Gas Bill",
+                amount=Decimal("3500.00"),
+                currency="PKR",
+                status=TransactionStatus.completed,
+                initiated_via="voice"
+            )
+            db.add_all([tx1, tx2, tx3, tx4, tx5, tx6])
             db.commit()
             print(f"Successfully seeded transactions!")
         print(f"User ID: {u_id}")

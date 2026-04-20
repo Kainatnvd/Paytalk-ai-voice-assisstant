@@ -7,6 +7,8 @@ import 'screens/transaction_otp_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/security_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/security_settings_screen.dart';
+import 'screens/notification_settings_screen.dart';
 import 'widgets/bottom_dock.dart';
 import 'theme/app_colors.dart';
 
@@ -44,6 +46,8 @@ class PayTalkApp extends StatelessWidget {
         '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/dashboard': (context) => const NavigationShell(),
         '/security': (context) => const SecurityScreen(),
+        '/security-settings': (context) => const SecuritySettingsScreen(),
+        '/notification-settings': (context) => const NotificationSettingsScreen(),
       },
     );
   }

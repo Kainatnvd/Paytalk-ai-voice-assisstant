@@ -115,7 +115,17 @@ def initiate_transfer(
     if _check_idempotency(db, sender_id, recipient_account, amount):
         raise ValueError("Duplicate transaction: identical transfer submitted within 60 seconds")
 
-    # 2. Daily limit check
+    # 2. Balance check
+    baseline = Decimal("50000")
+    total_spent = db.query(func.sum(Transaction.amount)).filter(
+        Transaction.sender_id == sender_id,
+        Transaction.status == "completed"
+    ).scalar() or Decimal("0")
+    current_balance = baseline - Decimal(str(total_spent))
+    if amount > current_balance:
+        raise ValueError(f"Insufficient balance. Available: PKR {current_balance:,.2f}, Requested: PKR {amount:,.2f}")
+
+    # 3. Daily limit check
     limit_result = _check_daily_limit(db, sender_id, partner_id, amount)
     if not limit_result["ok"]:
         raise ValueError(limit_result["reason"])

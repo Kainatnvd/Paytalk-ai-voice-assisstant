@@ -10,6 +10,7 @@ import '../theme/app_typography.dart';
 import '../widgets/glass_card.dart';
 import '../models/chat_message.dart';
 import '../services/api_service.dart';
+import '../widgets/bottom_dock.dart';
 
 import 'transaction_otp_screen.dart';
 
@@ -27,6 +28,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   final ApiService _apiService = ApiService();
   final AudioRecorder _audioRecorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final GlobalKey _micKey = GlobalKey();
+  final ScrollController _scrollController = ScrollController();
 
   String _balance = '...';
   String _userName = 'User';
@@ -45,14 +48,31 @@ class _DashboardScreenState extends State<DashboardScreen>
       duration: const Duration(seconds: 6),
     )..repeat(reverse: true);
     _fetchData();
+    AppFloatingDock.micScrollNotifier.addListener(_scrollToMic);
   }
 
   @override
   void dispose() {
+    AppFloatingDock.micScrollNotifier.removeListener(_scrollToMic);
+    _scrollController.dispose();
     _orbController.dispose();
     _audioRecorder.dispose();
     _audioPlayer.dispose();
+    _apiService.dispose();
     super.dispose();
+  }
+
+  void _scrollToMic() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_micKey.currentContext != null) {
+        Scrollable.ensureVisible(
+          _micKey.currentContext!,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+          alignment: 0.5,
+        );
+      }
+    });
   }
 
   Future<void> _fetchData() async {
@@ -130,6 +150,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             text: data['response_text'],
             sender: MessageSender.assistant,
             timestamp: DateTime.now(),
+            payload: data['payload'] != null ? Map<String, dynamic>.from(data['payload']) : null,
           ));
         });
 
@@ -137,10 +158,22 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (data['response_audio'] != null &&
             data['response_audio'].toString().isNotEmpty) {
           try {
-            final bytes = base64Decode(data['response_audio']);
-            // BytesSource works on all platforms (Web, Android, iOS, Windows)
-            await _audioPlayer.play(BytesSource(bytes));
-          } catch (_) {}
+            final audioB64 = data['response_audio'].toString();
+            
+            if (kIsWeb) {
+              // On Web/Chrome, create a data URL — gTTS generates MP3 (mpeg)
+              final dataUrl = 'data:audio/mpeg;base64,$audioB64';
+              await _audioPlayer.play(UrlSource(dataUrl));
+            } else {
+              // On mobile/desktop, BytesSource works fine
+              final bytes = base64Decode(audioB64);
+              await _audioPlayer.play(BytesSource(bytes));
+            }
+            
+            debugPrint('[Audio] Playing TTS response');
+          } catch (e) {
+            debugPrint('[Audio] Playback error: $e');
+          }
         }
 
         // Refresh balance in case it changed
@@ -209,6 +242,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   _buildHeader(),
                   Expanded(
                     child: SingleChildScrollView(
+                      controller: _scrollController,
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Column(
@@ -320,16 +354,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  /// Ethereal orb: radial gradient circles with pulse animation
+  /// Ethereal orb: multi-layered gradient rings with pulse animation
   Widget _buildEtherealOrb() {
     return AnimatedBuilder(
       animation: _orbController,
       builder: (context, child) {
-        // More dramatic animation when recording
         double scale = _isRecording 
             ? 1.05 + (_orbController.value * 0.08)
-            : 1.0 + (_orbController.value * 0.05);
-        double translateY = -12.0 * _orbController.value;
+            : 1.0 + (_orbController.value * 0.04);
+        double translateY = -10.0 * _orbController.value;
         return Transform.translate(
           offset: Offset(0, translateY),
           child: Transform.scale(
@@ -339,74 +372,160 @@ class _DashboardScreenState extends State<DashboardScreen>
         );
       },
       child: SizedBox(
-        width: 280,
-        height: 280,
+        width: 300,
+        height: 300,
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // Outer glow - significantly more visible when recording
+            // ── Layer 1: Outermost soft halo ──
             AnimatedBuilder(
               animation: _orbController,
               builder: (context, _) {
                 return Container(
-                  width: 280,
-                  height: 280,
+                  width: 300,
+                  height: 300,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
                         _isRecording
-                            ? AppColors.primary.withOpacity(0.3 + (_orbController.value * 0.1))
-                            : AppColors.primary.withOpacity(0.12),
-                        AppColors.primary.withOpacity(0.04),
+                            ? const Color(0xFF818CF8).withOpacity(0.2 + (_orbController.value * 0.1))
+                            : const Color(0xFF818CF8).withOpacity(0.06),
+                        const Color(0xFF6366F1).withOpacity(0.03),
                         Colors.transparent,
                       ],
+                      stops: const [0.0, 0.5, 1.0],
                     ),
                   ),
                 );
               }
             ),
-            // Inner pulse - adds a "breathing" effect
+
+            // ── Layer 2: Secondary ring ──
+            AnimatedBuilder(
+              animation: _orbController,
+              builder: (context, _) {
+                final ringOpacity = _isRecording 
+                    ? 0.15 + (_orbController.value * 0.1) 
+                    : 0.06 + (_orbController.value * 0.03);
+                return Container(
+                  width: 240,
+                  height: 240,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF818CF8).withOpacity(ringOpacity),
+                      width: 1.5,
+                    ),
+                  ),
+                );
+              }
+            ),
+
+            // ── Layer 3: Inner glow ring ──
+            AnimatedBuilder(
+              animation: _orbController,
+              builder: (context, _) {
+                final size = _isRecording 
+                    ? 200.0 + (16 * _orbController.value) 
+                    : 200.0;
+                return Container(
+                  width: size,
+                  height: size,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        _isRecording
+                            ? const Color(0xFF6366F1).withOpacity(0.25 * (1 - _orbController.value * 0.5))
+                            : const Color(0xFF6366F1).withOpacity(0.08),
+                        _isRecording
+                            ? const Color(0xFF818CF8).withOpacity(0.12)
+                            : const Color(0xFF818CF8).withOpacity(0.04),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                    ),
+                  ),
+                );
+              }
+            ),
+
+            // ── Layer 4: Recording pulse ring ──
             if (_isRecording)
               AnimatedBuilder(
                 animation: _orbController,
                 builder: (context, _) {
                   return Container(
-                    width: 200 + (20 * _orbController.value),
-                    height: 200 + (20 * _orbController.value),
+                    width: 180 + (30 * _orbController.value),
+                    height: 180 + (30 * _orbController.value),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          AppColors.primary.withOpacity(0.2 * (1 - _orbController.value)),
-                          Colors.transparent,
-                        ],
+                      border: Border.all(
+                        color: const Color(0xFF6366F1).withOpacity(0.3 * (1 - _orbController.value)),
+                        width: 2,
                       ),
                     ),
                   );
                 }
               ),
-            // Center glass circle
+
+            // ── Center glass circle ──
             Container(
               width: 160,
               height: 160,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.45),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withOpacity(_isRecording ? 0.7 : 0.55),
+                    Colors.white.withOpacity(_isRecording ? 0.5 : 0.35),
+                    const Color(0xFFEEF2FF).withOpacity(0.3),
+                  ],
+                ),
                 border: Border.all(
-                    color: AppColors.primary.withOpacity(_isRecording ? 0.3 : 0.1),
-                    width: _isRecording ? 2 : 1),
-                boxShadow: _isRecording ? [
+                  color: _isRecording 
+                      ? const Color(0xFF6366F1).withOpacity(0.35)
+                      : const Color(0xFF818CF8).withOpacity(0.12),
+                  width: _isRecording ? 2.0 : 1.0,
+                ),
+                boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.15),
-                    blurRadius: 30,
-                    spreadRadius: 5,
-                  )
-                ] : null,
+                    color: const Color(0xFF6366F1).withOpacity(_isRecording ? 0.2 : 0.08),
+                    blurRadius: _isRecording ? 40 : 20,
+                    spreadRadius: _isRecording ? 8 : 2,
+                  ),
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.8),
+                    blurRadius: 10,
+                    spreadRadius: -5,
+                    offset: const Offset(-2, -2),
+                  ),
+                ],
               ),
-              child: _isRecording ? Center(
-                child: Icon(Icons.graphic_eq, color: AppColors.primary.withOpacity(0.6), size: 40),
-              ) : null,
+              child: Center(
+                child: AnimatedBuilder(
+                  animation: _orbController,
+                  builder: (context, _) {
+                    return ShaderMask(
+                      shaderCallback: (Rect bounds) {
+                        return const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF6366F1), Color(0xFF818CF8)],
+                        ).createShader(bounds);
+                      },
+                      child: Icon(
+                        _isRecording ? Icons.graphic_eq : Icons.auto_awesome,
+                        size: _isRecording ? 44 : 36,
+                        color: Colors.white,
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
           ],
         ),
@@ -444,49 +563,52 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   /// Mic button matching wireframe: large circular primary btn with shadow
   Widget _buildMicButton() {
-    return GestureDetector(
-      onTap: _isProcessingRecording ? null : _toggleRecording,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Pulse ring on recording
-          if (_isRecording)
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.primary.withOpacity(0.1),
-                  width: 4,
+    return Container(
+      key: _micKey,
+      child: GestureDetector(
+        onTap: _isProcessingRecording ? null : _toggleRecording,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Pulse ring on recording
+            if (_isRecording)
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.primary.withOpacity(0.1),
+                    width: 4,
+                  ),
                 ),
               ),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color:
+                    _isRecording ? Colors.redAccent : AppColors.primary,
+                boxShadow: [
+                  BoxShadow(
+                    color: (_isRecording
+                            ? Colors.redAccent
+                            : AppColors.primary)
+                        .withOpacity(0.3),
+                    blurRadius: 30,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Icon(
+                _isRecording ? Icons.stop : Icons.mic,
+                size: 36,
+                color: Colors.white,
+              ),
             ),
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color:
-                  _isRecording ? Colors.redAccent : AppColors.primary,
-              boxShadow: [
-                BoxShadow(
-                  color: (_isRecording
-                          ? Colors.redAccent
-                          : AppColors.primary)
-                      .withOpacity(0.3),
-                  blurRadius: 30,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Icon(
-              _isRecording ? Icons.stop : Icons.mic,
-              size: 36,
-              color: Colors.white,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -513,7 +635,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (msg.sender == MessageSender.assistant) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: _buildAssistantBubble(msg.text),
+            child: _buildAssistantBubble(msg.text, payload: msg.payload),
           );
         } else {
           return Padding(
@@ -525,7 +647,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildAssistantBubble(String text) {
+  Widget _buildAssistantBubble(String text, {Map<String, dynamic>? payload}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -544,17 +666,70 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
         const SizedBox(width: 12),
         Flexible(
-          child: GlassCard(
-            borderRadius: 20,
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              text,
-              style: AppTypography.bodyMedium
-                  .copyWith(color: AppColors.onSurface, height: 1.5),
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GlassCard(
+                borderRadius: 20,
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  text,
+                  style: AppTypography.bodyMedium
+                      .copyWith(color: AppColors.onSurface, height: 1.5),
+                ),
+              ),
+              if (payload != null && payload.containsKey('transactions'))
+                _buildTransactionList(payload['transactions'] as List<dynamic>),
+            ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildTransactionList(List<dynamic> transactions) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        children: transactions.map((txn) {
+          final isSent = txn['type'] == 'sent';
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.outlineVariant),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      isSent ? Icons.arrow_upward : Icons.arrow_downward,
+                      color: isSent ? Colors.redAccent : Colors.green,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isSent ? 'Sent Transfer' : 'Received Funds',
+                      style: AppTypography.bodySmall,
+                    ),
+                  ],
+                ),
+                Text(
+                  'PKR ${txn['amount']}',
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isSent ? Colors.redAccent : Colors.green,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 
