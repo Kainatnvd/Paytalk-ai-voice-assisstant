@@ -25,10 +25,11 @@ def _log(db: Session, action: str, user_id: uuid.UUID, details: dict, level: str
         severity=level,
         event_type="transaction",
         event_subtype=action,
-        user_id=None,  # skip direct integer casting for now if UUID mismatch
+        user_id=user_id,
         message=f"Raast action: {action}",
         metadata_json=json.dumps(details),
     ))
+
 
 
 def _check_idempotency(db: Session, sender_id: uuid.UUID, recipient_account: str, amount: Decimal) -> bool:
@@ -142,7 +143,16 @@ def initiate_transfer(
     db.commit()
     db.refresh(txn)
 
-    # 4. Call Raast sandbox API
+    # 4. Call Raast sandbox API (bypass if disabled)
+    if not settings.RAAST_SANDBOX_ENABLED:
+        txn.status = TransactionStatus.completed
+        txn.raast_reference_id = f"MOCK-DEMO-{txn.id}"
+        txn.completed_at = datetime.now(timezone.utc)
+        _update_daily_summary(db, sender_id, partner_id, amount)
+        _log(db, "transfer_mocked", sender_id, {"txn_id": txn.id, "mode": "demo_bypass"}, level="INFO")
+        db.commit()
+        return txn
+
     try:
         payload = {
             "senderAccount": "",           # filled by bank middleware
@@ -157,7 +167,7 @@ def initiate_transfer(
             f"{settings.RAAST_SANDBOX_URL}/v1/transfer",
             json=payload,
             headers=headers,
-            timeout=10.0,
+            timeout=5.0, # Reduced timeout for better UX
         )
         resp.raise_for_status()
         result = resp.json()
@@ -170,14 +180,16 @@ def initiate_transfer(
         _update_daily_summary(db, sender_id, partner_id, amount)
         _log(db, "transfer_success", sender_id, {"txn_id": txn.id, "raast_ref": raast_ref})
 
-    except httpx.HTTPError as e:
-        # Sandbox unavailable – mock for FYP demo
-        print(f"[Raast] API error ({e}), using mock response.")
+    except (httpx.HTTPError, httpx.RequestError) as e:
+        # Sandbox unavailable or DNS error – mock for FYP demo
+        # Logging as INFO because this is expected behavior in non-internet demo environments
+        print(f"[Raast] Sandbox unreachable ({e}). Falling back to mock response for demo.")
         txn.status = TransactionStatus.completed
-        txn.raast_reference_id = f"MOCK-{txn.id}"
+        txn.raast_reference_id = f"MOCK-FALLBACK-{txn.id}"
         txn.completed_at = datetime.now(timezone.utc)
         _update_daily_summary(db, sender_id, partner_id, amount)
-        _log(db, "transfer_mocked", sender_id, {"txn_id": txn.id}, level="WARNING")
+        _log(db, "transfer_mocked", sender_id, {"txn_id": txn.id, "error": str(e)}, level="WARNING")
+
 
     except Exception as e:
         txn.status = TransactionStatus.failed

@@ -22,8 +22,11 @@ from app.core.config import settings
 _model: Optional[whisper.Whisper] = None
 
 
-def get_model() -> whisper.Whisper:
+def get_model() -> Optional[whisper.Whisper]:
     global _model
+    if settings.STT_ENGINE != "local":
+        return None
+        
     if _model is None:
         import torch
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -37,78 +40,92 @@ def get_model() -> whisper.Whisper:
 def transcribe_audio(audio_bytes: bytes, language_hint: str = "ur") -> dict:
     """
     Transcribe raw audio bytes.
-
-    Returns:
-        {
-            "text": str,
-            "language": str,
-            "duration_seconds": float,
-            "processing_time_ms": int
-        }
-        OR {"error": "transcription_failed"} on failure.
+    Supports Local Whisper or Cloud Gemini based on settings.
     """
     start = time.perf_counter()
+    
+    # ── Option A: Gemini Cloud STT (No local resources) ──────────────────────
+    if settings.STT_ENGINE == "gemini":
+        try:
+            from google import genai
+            from google.genai import types
+            
+            if not settings.GOOGLE_API_KEY:
+                return {"error": "gemini_api_key_missing"}
+
+            client = genai.Client(api_key=settings.GOOGLE_API_KEY)
+            
+            # Gemini can process audio directly
+            response = client.models.generate_content(
+                model='gemini-2.0-flash',
+                contents=[
+                    types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav"),
+                    f"Transcribe this audio exactly. The language is likely {language_hint}. Return ONLY the transcription text."
+                ]
+            )
+            
+            text = response.text.strip()
+            elapsed_ms = int((time.perf_counter() - start) * 1000)
+            
+            return {
+                "text": text,
+                "language": language_hint, # Gemini usually detects automatically but we'll stick to hint
+                "duration_seconds": 0.0,    # Cloud API doesn't always return this easily
+                "processing_time_ms": elapsed_ms,
+            }
+        except Exception as e:
+            print(f"[STT] Gemini Cloud Error: {e}")
+            return {"error": "gemini_transcription_failed", "detail": str(e)}
+
+    # ── Option B: Local Whisper ───────────────────────────────────────────────
     try:
         model = get_model()
+        if model is None:
+            return {"error": "stt_engine_misconfigured"}
+
         import torch
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # Whisper expects a file-like object or numpy array; write bytes to buffer
-        audio_buffer = io.BytesIO(audio_bytes)
-
-        # Use whisper's load_audio helper via a temp approach
         import tempfile, os
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
             tmp.write(audio_bytes)
             tmp_path = tmp.name
 
         try:
-            # Prevent Whisper hallucination with strict decoding parameters.
             result = model.transcribe(
                 tmp_path,
                 task="transcribe",
-                language="en", # Forces output in Latin alphabet (Roman Urdu)
                 fp16=(device == "cuda"),
-                temperature=(0.0, 0.2, 0.4), # Allow slight fallback for hallucination loops
-                condition_on_previous_text=False, # Stops hallucination loops
+                temperature=(0.0, 0.2, 0.4), 
+                condition_on_previous_text=False, 
             )
         finally:
-            os.unlink(tmp_path)
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
             
-        # ── Hallucination & Silence Filtering ──
         raw_text = result["text"].strip()
         segments = result.get("segments", [])
         
-        # 1. Check if the audio is mostly silence/noise
+        # ── Hallucination & Silence Filtering ──
         avg_no_speech = sum(s.get("no_speech_prob", 0.0) for s in segments) / max(1, len(segments))
-        if avg_no_speech > 0.7:
+        if avg_no_speech > 0.9:
              raw_text = ""
-             
-        # 2. Check for crazy repetetive patterns (e.g. "Om Om Om Om Om")
-        # If the text is long but consists of very few unique characters, it's a hallucination.
         if len(raw_text) > 15 and len(set(raw_text.replace(" ", ""))) <= 4:
             raw_text = ""
-            
-        # 3. Hardcode known Whisper "silence" hallucination tokens
         if "ॐ" in raw_text or "Amma Amma" in raw_text or "Subtitles by" in raw_text:
             raw_text = ""
 
-        # ── Language Detection & Normalization ──
+        # ── Language Detection ──
         detected_raw = result.get("language", "ur")
-        
-        # Whisper maps: 'hi' (Hindi), 'ur' (Urdu), 'pa' (Punjabi) -> 'ur'
-        # Others can stay as they are, but we mostly care about 'en' vs 'ur'
         if detected_raw in ["ur", "hi", "pa", "sd"]:
             final_lang = "ur"
         elif detected_raw == "en":
             final_lang = "en"
         else:
-            # Fallback to the hint or English
             final_lang = language_hint if language_hint in ["en", "ur"] else "en"
 
         elapsed_ms = int((time.perf_counter() - start) * 1000)
-
-        # Whisper duration is in the segments
         duration = sum(seg.get("end", 0) - seg.get("start", 0) for seg in result.get("segments", []))
 
         return {

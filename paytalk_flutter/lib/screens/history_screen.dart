@@ -20,17 +20,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _currency = 'PKR';
   List<Transaction> _transactions = [];
   bool _isLoading = true;
+  bool _isFetching = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchData();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Refresh data whenever the route changes (e.g. returning to this tab)
+    _apiService.addListener(_onGlobalRefresh);
     _fetchData();
   }
 
@@ -42,27 +37,41 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _onGlobalRefresh() {
-    _fetchData();
+    // Only refresh if we aren't currently fetching to avoid loops
+    if (!_isFetching) {
+      _fetchData();
+    }
   }
 
   Future<void> _fetchData() async {
-    setState(() => _isLoading = true);
-    final balanceResult = await _apiService.getBalance();
-    final transactionsResult = await _apiService.getTransactions();
+    if (_isFetching) return;
+    
+    setState(() {
+      _isFetching = true;
+      _isLoading = true;
+    });
 
-    _apiService.addListener(_onGlobalRefresh);
+    try {
+      final balanceResult = await _apiService.getBalance();
+      final transactionsResult = await _apiService.getTransactions();
 
-    if (mounted) {
-      setState(() {
-        if (balanceResult.containsKey('balance')) {
-          _balance = balanceResult['balance'];
-          _currency = balanceResult['currency'] ?? 'PKR';
-        }
-        _transactions = transactionsResult;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          if (balanceResult.containsKey('balance')) {
+            _balance = balanceResult['balance'];
+            _currency = balanceResult['currency'] ?? 'PKR';
+          }
+          _transactions = transactionsResult;
+          _isLoading = false;
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isFetching = false);
+      }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

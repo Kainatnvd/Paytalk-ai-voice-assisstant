@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _cnicController = TextEditingController();
+  final TextEditingController _pinController = TextEditingController();
   final ApiService _apiService = ApiService();
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -30,6 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     _nameController.dispose();
     _cnicController.dispose();
+    _pinController.dispose();
     super.dispose();
   }
 
@@ -51,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     Map<String, dynamic> result;
     if (_isRegistering) {
-      if (_nameController.text.isEmpty || _cnicController.text.isEmpty) {
+      if (_nameController.text.isEmpty || _cnicController.text.isEmpty || _pinController.text.isEmpty) {
         setState(() => _isLoading = false);
         return;
       }
@@ -60,6 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _phoneController.text.trim(),
         _cnicController.text.trim(),
         _passwordController.text.trim(),
+        _pinController.text.trim(),
       );
     } else {
       result = await _apiService.login(
@@ -185,6 +188,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: AppTypography.labelLarge.copyWith(fontSize: 14)),
             const SizedBox(height: 8),
             _buildTextField(_cnicController, Icons.credit_card, '4210112345678', TextInputType.number),
+            const SizedBox(height: 24),
+            Text('4-Digit PIN',
+                style: AppTypography.labelLarge.copyWith(fontSize: 14)),
+            const SizedBox(height: 8),
+            _buildTextField(_pinController, Icons.pin, '1234', TextInputType.number),
             const SizedBox(height: 24),
           ],
 

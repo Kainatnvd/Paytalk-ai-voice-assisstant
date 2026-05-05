@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: paytalk_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-1122}
+      POSTGRES_DB: PayTalk_dbss
+    volumes:
+      # Data is stored on a mounted volume. 
+      # SECURITY REQUIREMENT: The host directory '/mnt/encrypted_pg_data' MUST be a LUKS-encrypted partition.
+      - /mnt/encrypted_pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: paytalk_backend
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db

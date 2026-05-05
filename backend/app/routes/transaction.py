@@ -109,7 +109,11 @@ def confirm_transfer(
     else:
         msg = tmpl.transfer_failed(lang)
 
-    return {"status": txn.status.value, "message": msg, "transaction": txn}
+    return {
+        "status": txn.status.value, 
+        "message": msg, 
+        "transaction": TransactionResponse.model_validate(txn)
+    }
 
 
 @router.get("/{transaction_id}", response_model=TransactionResponse)

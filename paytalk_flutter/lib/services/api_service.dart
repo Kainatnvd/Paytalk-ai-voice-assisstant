@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -28,7 +29,7 @@ class ApiService extends ChangeNotifier {
   }
   // Use http://10.0.2.2:8000 for Android Emulator
   // Use http://localhost:8000 for Web / Windows / iOS Simulator
-  static const String baseUrl = 'http://localhost:8000';
+  static const String baseUrl = 'http://127.0.0.1:8000';
 
   // ── Auth ────────────────────────────────────────────────────────────
 
@@ -42,7 +43,7 @@ class ApiService extends ChangeNotifier {
           'password': password,
         }),
         headers: {'Content-Type': 'application/json'},
-      );
+      ).timeout(const Duration(seconds: 15));
 
       final data = json.decode(response.body);
 
@@ -63,6 +64,8 @@ class ApiService extends ChangeNotifier {
           'message': _parseError(data['detail']) ?? 'Login failed'
         };
       }
+    } on TimeoutException {
+      return {'status': 'error', 'message': 'Server is not responding. Please check your connection and try again.'};
     } catch (e) {
       return {'status': 'error', 'message': 'Connection error: $e'};
     }
@@ -70,7 +73,7 @@ class ApiService extends ChangeNotifier {
 
   /// POST /auth/register → { user_id, full_name, phone_number, ... }
   Future<Map<String, dynamic>> register(
-      String name, String phone, String cnic, String password) async {
+      String name, String phone, String cnic, String password, String pin) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/register'),
@@ -79,9 +82,10 @@ class ApiService extends ChangeNotifier {
           'phone_number': phone,
           'cnic': cnic,
           'password': password,
+          'pin': pin,
         }),
         headers: {'Content-Type': 'application/json'},
-      );
+      ).timeout(const Duration(seconds: 15));
 
       final data = json.decode(response.body);
 
@@ -94,6 +98,8 @@ class ApiService extends ChangeNotifier {
           'message': _parseError(data['detail']) ?? 'Registration failed'
         };
       }
+    } on TimeoutException {
+      return {'status': 'error', 'message': 'Server is not responding. Please check your connection and try again.'};
     } catch (e) {
       return {'status': 'error', 'message': 'Connection error: $e'};
     }
@@ -359,9 +365,15 @@ class ApiService extends ChangeNotifier {
         return {'status': 'error', 'message': 'Not logged in'};
       }
 
+      final nonce = await _getVoiceNonce();
+      if (nonce == null) {
+        return {'status': 'error', 'message': 'Failed to secure connection (nonce error)'};
+      }
+
       var request = http.MultipartRequest(
           'POST', Uri.parse('$baseUrl/voice/process'));
       request.headers['Authorization'] = 'Bearer $token';
+      request.fields['nonce'] = nonce;
 
       if (kIsWeb) {
         final response = await http.get(Uri.parse(filePath));
@@ -396,7 +408,61 @@ class ApiService extends ChangeNotifier {
     }
   }
 
+  /// POST /voice/process-text (JSON) → VoiceProcessResponse
+  Future<Map<String, dynamic>> submitVoiceText(String text) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token');
+      if (token == null) {
+        return {'status': 'error', 'message': 'Not logged in'};
+      }
+
+      final nonce = await _getVoiceNonce();
+      if (nonce == null) {
+        return {'status': 'error', 'message': 'Failed to secure connection (nonce error)'};
+      }
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/voice/process-text'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          'text': text,
+          'nonce': nonce,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return {
+          'status': 'success',
+          'data': json.decode(response.body),
+        };
+      } else {
+        final errorData = json.decode(response.body);
+        return {
+          'status': 'error',
+          'message': errorData['detail'] ?? 'Text processing failed',
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Connection error: $e'};
+    }
+  }
+
   // ── Helpers ─────────────────────────────────────────────────────────
+
+  Future<String?> _getVoiceNonce() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/voice/nonce'));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['nonce'];
+      }
+    } catch (_) {}
+    return null;
+  }
 
   Future<Map<String, String>?> _getAuthHeaders() async {
     final prefs = await SharedPreferences.getInstance();

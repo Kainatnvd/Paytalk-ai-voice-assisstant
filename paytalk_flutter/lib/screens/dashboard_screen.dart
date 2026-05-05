@@ -13,6 +13,7 @@ import '../services/api_service.dart';
 import '../widgets/bottom_dock.dart';
 
 import 'transaction_otp_screen.dart';
+import 'transaction_pin_screen.dart';
 
 /// Dashboard Screen — exact replication of dashboard_light_theme wireframe.
 /// Voice assistant hub with ethereal orb, mic button, and chat bubbles.
@@ -179,20 +180,26 @@ class _DashboardScreenState extends State<DashboardScreen>
         // Refresh balance in case it changed
         _fetchData();
 
-        // Check if we need to navigate to OTP screen
-        if (data['dialogue_state'] == 'AWAITING_OTP') {
+        // Check if we need to navigate to PIN screen
+        if (data['dialogue_state'] == 'AWAITING_PIN') {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => TransactionOtpScreen(
+              builder: (context) => TransactionPinScreen(
                 pendingAction: data['pending_action'],
               ),
             ),
-          ).then((refreshed) {
-            if (refreshed == true) {
-              _fetchData(); // Refresh balance and history
+          ).then((result) {
+            if (result != null && result is Map<String, dynamic>) {
+              // The PIN was successful and returned the next state (likely AWAITING_OTP)
+              _handleDialogueState(result);
             }
           });
+        }
+        
+        // Check if we need to navigate to OTP screen
+        if (data['dialogue_state'] == 'AWAITING_OTP') {
+          _navigateToOtp(data);
         }
       } else {
         setState(() {
@@ -205,6 +212,61 @@ class _DashboardScreenState extends State<DashboardScreen>
         });
       }
     }
+  }
+
+  void _handleDialogueState(Map<String, dynamic> data) {
+    if (mounted) {
+      setState(() {
+        _messages.add(ChatMessage(
+          text: data['response_text'],
+          sender: MessageSender.assistant,
+          timestamp: DateTime.now(),
+          payload: data['payload'] != null ? Map<String, dynamic>.from(data['payload']) : null,
+        ));
+      });
+
+      // Play audio response if available
+      if (data['response_audio'] != null && data['response_audio'].toString().isNotEmpty) {
+        try {
+          final bytes = base64Decode(data['response_audio'].toString());
+          _audioPlayer.play(BytesSource(bytes));
+        } catch (e) {
+          debugPrint('[Audio] Playback error: $e');
+        }
+      }
+
+      if (data['dialogue_state'] == 'AWAITING_PIN') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TransactionPinScreen(
+              pendingAction: data['pending_action'],
+            ),
+          ),
+        ).then((result) {
+          if (result != null && result is Map<String, dynamic>) {
+            _handleDialogueState(result);
+          }
+        });
+      } else if (data['dialogue_state'] == 'AWAITING_OTP') {
+        _navigateToOtp(data);
+      }
+    }
+  }
+
+  void _navigateToOtp(Map<String, dynamic> data) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TransactionOtpScreen(
+          pendingAction: data['pending_action'],
+        ),
+      ),
+    ).then((refreshed) {
+      if (refreshed == true) {
+        _fetchData();
+      }
+    });
   }
 
   @override

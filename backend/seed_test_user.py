@@ -35,17 +35,20 @@ def create_test_user():
             user = User(
                 user_id=u_id,
                 partner_id=partner.partner_id,
-                phone_number=phone,
-                full_name="Faraz Hashmi",
+                email="faraz@example.com",
                 password_hash=hash_password("password123"),
                 account_number="PK12PAYT00000001",
-                cnic_hash=hash_cnic("4210112345678"),
-                cnic_encrypted=encrypt_cnic("4210112345678"),
                 is_active=True,
                 preferred_language="en",
                 voice_consent_given=True
             )
+            # Use encrypted setters
+            user.full_name = "Faraz Hashmi"
+            user.phone_number = phone
+            user.set_cnic("4210112345678")
+            
             db.add(user)
+
             db.commit()
             print(f"Successfully created test user!")
 

@@ -16,6 +16,8 @@ from app.models.system_log import SystemLog
 from app.models.admin_user import AdminUser
 from app.models.sdk_api_key import SdkApiKey
 from app.models.daily_txn_summaries import DailyTxnSummary
+from app.models.audit_log import AuditLog
+from app.models.voice_nonce import VoiceNonce
 
 __all__ = [
     "User",
@@ -33,4 +35,6 @@ __all__ = [
     "AdminUser",
     "SdkApiKey",
     "DailyTxnSummary",
+    "AuditLog",
+    "VoiceNonce",
 ]
