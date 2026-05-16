@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/mesh_gradient_background.dart';
 import '../services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -145,101 +146,125 @@ class _TransactionOtpScreenState extends State<TransactionOtpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
         title: const Text('Verify Transaction'),
         elevation: 0,
         backgroundColor: Colors.transparent,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const SizedBox(height: 48),
-            Text(
-              'Confirm Transfer',
-              style: AppTypography.headlineLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'PKR ${widget.pendingAction['amount']} to ${widget.pendingAction['recipient_name']}',
-              style: AppTypography.bodyLarge.copyWith(color: AppColors.textMuted),
-            ),
-            const SizedBox(height: 48),
-            
-            // OTP manual inputs
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(6, (index) => _buildOtpBox(index)),
-            ),
-            
-            const SizedBox(height: 48),
-            
-            if (_isLoading)
-              const CircularProgressIndicator()
-            else
-              ElevatedButton(
-                onPressed: () {
-                  String otp = _controllers.map((e) => e.text).join();
-                  if (otp.length == 6) {
-                    _submitOtp(otp);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 56),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                child: const Text('Confirm Manually'),
+      body: AnimatedGradientBlob(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              const SizedBox(height: 48),
+              Text(
+                'Confirm Transfer',
+                style: AppTypography.headlineLarge,
               ),
-            
-            const SizedBox(height: 40),
-            const Text('OR USE VOICE', style: TextStyle(color: Colors.grey, letterSpacing: 1.2, fontSize: 12)),
-            const SizedBox(height: 24),
-            
-            // Mic button for "Yes Confirm"
-            GestureDetector(
-              onTap: _toggleRecording,
-              child: Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _isRecording ? Colors.redAccent : AppColors.primaryContainer,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.1),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    )
-                  ]
+              const SizedBox(height: 8),
+              Text(
+                'PKR ${widget.pendingAction['amount']} to ${widget.pendingAction['recipient_name']}',
+                style: AppTypography.bodyLarge.copyWith(color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 48),
+              
+              // OTP manual inputs
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(6, (index) => _buildOtpBox(index)),
+              ),
+              
+              const SizedBox(height: 48),
+              
+              if (_isLoading)
+                const CircularProgressIndicator(color: AppColors.primary)
+              else
+                Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryButtonGradient,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      String otp = _controllers.map((e) => e.text).join();
+                      if (otp.length == 6) {
+                        _submitOtp(otp);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: Text('Confirm Manually',
+                        style: AppTypography.headlineSmall.copyWith(color: Colors.white)),
+                  ),
                 ),
-                child: Icon(
-                  _isRecording ? Icons.stop : Icons.mic,
-                  color: _isRecording ? Colors.white : AppColors.primary,
-                  size: 32,
+              
+              const SizedBox(height: 40),
+              Text('OR USE VOICE',
+                  style: AppTypography.caption.copyWith(
+                      color: AppColors.textMuted, letterSpacing: 2)),
+              const SizedBox(height: 24),
+              
+              // Mic button for "Yes Confirm"
+              GestureDetector(
+                onTap: _toggleRecording,
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: _isRecording
+                        ? const LinearGradient(
+                            colors: [Color(0xFFF43F5E), Color(0xFFEF4444)])
+                        : AppColors.primaryGradient,
+                    boxShadow: [
+                      BoxShadow(
+                        color: (_isRecording ? AppColors.error : AppColors.primary)
+                            .withOpacity(0.3),
+                        blurRadius: 25,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    _isRecording ? Icons.stop_rounded : Icons.mic,
+                    color: Colors.white,
+                    size: 32,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _isRecording ? 'Listening for "Yes Confirm"...' : 'Say "Yes Confirm"',
-              style: AppTypography.bodySmall,
-            ),
+              const SizedBox(height: 16),
+              Text(
+                _isRecording ? 'Listening for "Yes Confirm"...' : 'Say "Yes Confirm"',
+                style: AppTypography.bodySmall,
+              ),
 
-            const SizedBox(height: 32),
-            OutlinedButton.icon(
-              onPressed: _resendOtp,
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Resend OTP Code'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              const SizedBox(height: 32),
+              OutlinedButton.icon(
+                onPressed: _resendOtp,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Resend OTP Code'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -273,16 +298,18 @@ class _TransactionOtpScreenState extends State<TransactionOtpScreen> {
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
         maxLength: 1,
-        style: AppTypography.headlineMedium,
+        style: AppTypography.headlineMedium.copyWith(color: AppColors.primary),
         decoration: InputDecoration(
           counterText: '',
+          filled: true,
+          fillColor: Colors.white.withOpacity(0.35),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.primary, width: 2),
+            borderSide: BorderSide(color: AppColors.primary.withOpacity(0.6), width: 2),
           ),
         ),
         onChanged: (value) {

@@ -1,8 +1,9 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-/// Floating dock bottom navigation matching the wireframe dock-blur CSS.
-/// Glassmorphic pill with inline center mic redirect button.
+/// Floating dock bottom navigation — Apple-style liquid glass.
+/// Frosted glass pill with inline center mic button.
 class AppFloatingDock extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
@@ -21,26 +22,49 @@ class AppFloatingDock extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
       height: 72,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(36),
-        border: Border.all(color: AppColors.outline),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.15),
-            blurRadius: 50,
-            offset: const Offset(0, 20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withOpacity(0.55),
+                  Colors.white.withOpacity(0.25),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(36),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.5),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.12),
+                  blurRadius: 40,
+                  offset: const Offset(0, 16),
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildNavItem(0, Icons.dashboard_rounded, 'Dashboard'),
+                _buildCenterMic(),
+                _buildNavItem(2, Icons.history_rounded, 'History'),
+                _buildNavItem(3, Icons.settings_rounded, 'Settings'),
+              ],
+            ),
           ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildNavItem(0, Icons.dashboard_rounded, 'Dashboard'),
-          _buildCenterMic(),
-          _buildNavItem(2, Icons.history_rounded, 'History'),
-          _buildNavItem(3, Icons.settings_rounded, 'Settings'),
-        ],
+        ),
       ),
     );
   }
@@ -50,12 +74,22 @@ class AppFloatingDock extends StatelessWidget {
     return GestureDetector(
       onTap: () => onTap(index),
       behavior: HitTestBehavior.opaque,
-      child: SizedBox(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
         width: 48,
         height: 48,
+        decoration: isActive
+            ? BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withOpacity(0.1),
+              )
+            : null,
         child: Icon(
           icon,
-          color: isActive ? AppColors.primary : Colors.indigo.shade200,
+          color: isActive
+              ? AppColors.primary
+              : AppColors.textMuted.withOpacity(0.5),
           size: 26,
         ),
       ),
@@ -70,16 +104,21 @@ class AppFloatingDock extends StatelessWidget {
         micScrollNotifier.value++; // Trigger scroll to mic viewport
       },
       child: Container(
-        width: 50,
-        height: 50,
+        width: 52,
+        height: 52,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: AppColors.primaryGradient,
+          gradient: AppColors.primaryButtonGradient,
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
+              color: AppColors.primary.withOpacity(0.4),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: AppColors.accent.withOpacity(0.15),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
             ),
           ],
         ),

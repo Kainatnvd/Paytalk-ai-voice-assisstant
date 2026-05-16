@@ -41,6 +41,7 @@ def transcribe_audio(audio_bytes: bytes, language_hint: str = "ur") -> dict:
     """
     Transcribe raw audio bytes.
     Supports Local Whisper or Cloud Gemini based on settings.
+    Falls back to local Whisper if Gemini fails.
     """
     start = time.perf_counter()
     
@@ -51,37 +52,49 @@ def transcribe_audio(audio_bytes: bytes, language_hint: str = "ur") -> dict:
             from google.genai import types
             
             if not settings.GOOGLE_API_KEY:
-                return {"error": "gemini_api_key_missing"}
-
-            client = genai.Client(api_key=settings.GOOGLE_API_KEY)
-            
-            # Gemini can process audio directly
-            response = client.models.generate_content(
-                model='gemini-2.0-flash',
-                contents=[
-                    types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav"),
-                    f"Transcribe this audio exactly. The language is likely {language_hint}. Return ONLY the transcription text."
-                ]
-            )
-            
-            text = response.text.strip()
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
-            
-            return {
-                "text": text,
-                "language": language_hint, # Gemini usually detects automatically but we'll stick to hint
-                "duration_seconds": 0.0,    # Cloud API doesn't always return this easily
-                "processing_time_ms": elapsed_ms,
-            }
+                print("[STT] Gemini API key missing. Falling back to local Whisper.")
+            else:
+                client = genai.Client(api_key=settings.GOOGLE_API_KEY)
+                
+                # Gemini can process audio directly
+                response = client.models.generate_content(
+                    model='gemini-2.0-flash',
+                    contents=[
+                        types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav"),
+                        "Transcribe this audio exactly. If the user speaks English, transcribe it in English. If they speak Urdu, transcribe it in Urdu. Do NOT translate. Do NOT include any timestamps like 00:01. Return ONLY the transcribed text."
+                    ]
+                )
+                
+                text = response.text.strip()
+                elapsed_ms = int((time.perf_counter() - start) * 1000)
+                
+                # Detect language from the transcribed text
+                import re
+                ascii_chars = len(re.findall(r'[a-zA-Z]', text))
+                total_chars = len(text.replace(" ", ""))
+                detected_lang = "en" if total_chars > 0 and (ascii_chars / max(1, total_chars)) > 0.5 else "ur"
+                
+                return {
+                    "text": text,
+                    "language": detected_lang,
+                    "duration_seconds": 0.0,
+                    "processing_time_ms": elapsed_ms,
+                }
         except Exception as e:
-            print(f"[STT] Gemini Cloud Error: {e}")
-            return {"error": "gemini_transcription_failed", "detail": str(e)}
+            print(f"[STT] Gemini Cloud Error: {e}. Falling back to local Whisper.")
 
-    # ── Option B: Local Whisper ───────────────────────────────────────────────
+    # ── Option B: Local Whisper (fallback) ────────────────────────────────────
     try:
         model = get_model()
         if model is None:
-            return {"error": "stt_engine_misconfigured"}
+            # If STT_ENGINE is gemini but model not loaded, force-load it
+            global _model
+            import torch
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            print(f"[STT] Force-loading Whisper model '{settings.WHISPER_MODEL_SIZE}' for fallback (on {device.upper()})...")
+            _model = whisper.load_model(settings.WHISPER_MODEL_SIZE, device=device)
+            print("[STT] Whisper model loaded.")
+            model = _model
 
         import torch
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -96,9 +109,20 @@ def transcribe_audio(audio_bytes: bytes, language_hint: str = "ur") -> dict:
             result = model.transcribe(
                 tmp_path,
                 task="transcribe",
+                language="en",
                 fp16=(device == "cuda"),
-                temperature=(0.0, 0.2, 0.4), 
-                condition_on_previous_text=False, 
+                temperature=0.0,
+                beam_size=3,
+                condition_on_previous_text=False,
+                no_speech_threshold=0.5,
+                initial_prompt=(
+                    "PayTalk voice banking assistant. "
+                    "User commands include: send 500 to Cafe, send 1000 to Ali, "
+                    "send 200 to Ahmed, transfer 3000 to Farzam, "
+                    "pay Electricity Bill, pay Water Bill, pay Gas Bill, "
+                    "send money to Tailor, send 500 to Coffee Shop, "
+                    "check balance, transaction history, check my account."
+                ),
             )
         finally:
             if os.path.exists(tmp_path):
@@ -117,17 +141,19 @@ def transcribe_audio(audio_bytes: bytes, language_hint: str = "ur") -> dict:
             raw_text = ""
 
         # ── Language Detection ──
-        detected_raw = result.get("language", "ur")
-        if detected_raw in ["ur", "hi", "pa", "sd"]:
-            final_lang = "ur"
-        elif detected_raw == "en":
+        import re
+        ascii_chars = len(re.findall(r'[a-zA-Z]', raw_text))
+        total_chars = len(raw_text.replace(" ", ""))
+        if total_chars > 0 and (ascii_chars / total_chars) > 0.5:
             final_lang = "en"
         else:
-            final_lang = language_hint if language_hint in ["en", "ur"] else "en"
+            final_lang = "ur"
 
         elapsed_ms = int((time.perf_counter() - start) * 1000)
         duration = sum(seg.get("end", 0) - seg.get("start", 0) for seg in result.get("segments", []))
 
+        print(f"[STT] Whisper result: '{raw_text}' (lang={final_lang})")
+        
         return {
             "text": raw_text,
             "language": final_lang,
@@ -136,5 +162,8 @@ def transcribe_audio(audio_bytes: bytes, language_hint: str = "ur") -> dict:
         }
 
     except Exception as e:
+        import traceback
         print(f"[STT] Transcription error: {e}")
+        traceback.print_exc()
         return {"error": "transcription_failed", "detail": str(e)}
+

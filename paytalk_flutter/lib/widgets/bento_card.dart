@@ -1,8 +1,9 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-/// Bento-style card matching wireframe glass-panel / bento-card CSS.
-/// White background with subtle ambient shadow — no borders per design system.
+/// Bento-style card with liquid glass effect.
+/// Frosted background with subtle refraction border — Apple aesthetic.
 class BentoCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -21,24 +22,45 @@ class BentoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: color ?? Colors.white,
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: glassBorder
-            ? Border.all(color: AppColors.primaryContainer)
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.onSurface.withOpacity(0.04),
-            blurRadius: 30,
-            spreadRadius: 0,
-            offset: const Offset(0, 4),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                (color ?? Colors.white).withOpacity(0.55),
+                (color ?? Colors.white).withOpacity(0.25),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: glassBorder
+                ? Border.all(
+                    color: Colors.white.withOpacity(0.45),
+                    width: 1.5,
+                  )
+                : null,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.06),
+                blurRadius: 30,
+                spreadRadius: 0,
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 15,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
+          child: child,
+        ),
       ),
-      child: child,
     );
   }
 }

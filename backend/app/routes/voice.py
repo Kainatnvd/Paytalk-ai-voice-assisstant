@@ -225,6 +225,138 @@ async def _handle_voice_logic(
         else:
             response_text = otp_result["reason"]
 
+    elif state == "AWAITING_PAYMENT_METHOD":
+        pending = dialogue["pending_action"] or {}
+        text_lower = transcription.lower()
+        raast_keywords = ["raast", "راست", "rast", "rust", "raz", "ras", "rahst", "raaast"]
+        if any(kw in text_lower for kw in raast_keywords):
+            dialogue_service.set_state(db, session_id, "AWAITING_RAAST_ID", pending)
+            response_text = "براہ کرم راست (Raast) اکاؤنٹ نمبر درج کریں۔" if detected_lang == "ur" else "Please enter the Raast account number."
+        elif "account" in text_lower or "اکاؤنٹ" in text_lower or "number" in text_lower:
+            dialogue_service.set_state(db, session_id, "AWAITING_ACCOUNT_TYPE", pending)
+            response_text = "براہ کرم اکاؤنٹ کی قسم بتائیں: ایزی پیسہ، جاز کیش، نیا پے، سادہ پے یا بینک ٹرانسفر۔" if detected_lang == "ur" else "Please specify the account type: Easypaisa, Jazzcash, Nayapay, Sadapay, or Bank Transfer."
+        else:
+            response_text = "براہ کرم بتائیں: اکاؤنٹ نمبر یا راست؟" if detected_lang == "ur" else "Please specify: Account Number or Raast?"
+
+    elif state == "AWAITING_ACCOUNT_TYPE":
+        pending = dialogue["pending_action"] or {}
+        text_lower = transcription.lower()
+        if any(kw in text_lower for kw in ["bank", "بینک"]):
+            pending["account_type"] = "Bank Transfer"
+            dialogue_service.set_state(db, session_id, "AWAITING_BANK_NAME", pending)
+            response_text = "براہ کرم بینک کا نام بتائیں، جیسے بینک الفلاح، میزان بینک، یا یو بی ایل۔" if detected_lang == "ur" else "Please speak the bank name, such as Bank Alfalah, Meezan Bank, or UBL."
+        elif any(kw in text_lower for kw in ["easypaisa", "easy paisa", "ایزی پیسہ"]):
+            pending["account_type"] = "Easypaisa"
+            dialogue_service.set_state(db, session_id, "AWAITING_ACCOUNT_NUMBER", pending)
+            response_text = "براہ کرم ایزی پیسہ اکاؤنٹ نمبر درج کریں۔" if detected_lang == "ur" else "Please enter the Easypaisa account number."
+        elif any(kw in text_lower for kw in ["jazzcash", "jazz cash", "جاز کیش"]):
+            pending["account_type"] = "Jazzcash"
+            dialogue_service.set_state(db, session_id, "AWAITING_ACCOUNT_NUMBER", pending)
+            response_text = "براہ کرم جاز کیش اکاؤنٹ نمبر درج کریں۔" if detected_lang == "ur" else "Please enter the Jazzcash account number."
+        elif any(kw in text_lower for kw in ["nayapay", "naya pay", "نیا پے"]):
+            pending["account_type"] = "Nayapay"
+            dialogue_service.set_state(db, session_id, "AWAITING_ACCOUNT_NUMBER", pending)
+            response_text = "براہ کرم نیا پے اکاؤنٹ نمبر درج کریں۔" if detected_lang == "ur" else "Please enter the Nayapay account number."
+        elif any(kw in text_lower for kw in ["sadapay", "sada pay", "سادہ پے"]):
+            pending["account_type"] = "Sadapay"
+            dialogue_service.set_state(db, session_id, "AWAITING_ACCOUNT_NUMBER", pending)
+            response_text = "براہ کرم سادہ پے اکاؤنٹ نمبر درج کریں۔" if detected_lang == "ur" else "Please enter the Sadapay account number."
+        else:
+            response_text = "معذرت، میں سمجھ نہیں سکا۔ براہ کرم بتائیں: ایزی پیسہ، جاز کیش، نیا پے، سادہ پے یا بینک؟" if detected_lang == "ur" else "Sorry, I didn't catch that. Please specify: Easypaisa, Jazzcash, Nayapay, Sadapay, or Bank?"
+
+    elif state == "AWAITING_BANK_NAME":
+        pending = dialogue["pending_action"] or {}
+        text_lower = transcription.lower()
+        if any(kw in text_lower for kw in ["alfalah", "الفلاح"]):
+            pending["bank_name"] = "Bank Alfalah"
+        elif any(kw in text_lower for kw in ["meezan", "میزان"]):
+            pending["bank_name"] = "Meezan Bank"
+        elif any(kw in text_lower for kw in ["ubl", "یو بی ایل"]):
+            pending["bank_name"] = "UBL"
+        else:
+            pending["bank_name"] = transcription.title()
+            
+        dialogue_service.set_state(db, session_id, "AWAITING_ACCOUNT_NUMBER", pending)
+        response_text = f"براہ کرم {pending['bank_name']} کا اکاؤنٹ نمبر یا IBAN درج کریں۔" if detected_lang == "ur" else f"Please enter the account number or IBAN for {pending['bank_name']}."
+
+    elif state == "AWAITING_ACCOUNT_NUMBER":
+        import re
+        # Allow letters for IBAN (PK...) but ignore spaces/dashes
+        entered_account = re.sub(r'[^a-zA-Z0-9]', '', transcription).upper()
+        
+        pending = dialogue["pending_action"] or {}
+        account_type = pending.get("account_type", "Account")
+        bank_name = pending.get("bank_name", "")
+        
+        mock_accounts = {
+            "Easypaisa": "03451234567",
+            "Jazzcash": "03001234567",
+            "Nayapay": "03331234567",
+            "Sadapay": "03111234567",
+            "Bank Alfalah": "100200300400" # Simplified for testing, or could be PK12ALFA...
+        }
+        
+        # Determine the expected mock based on selection
+        expected_mock = mock_accounts.get(bank_name if account_type == "Bank Transfer" else account_type, "123456789")
+        
+        if entered_account == expected_mock:
+            pending["recipient_account"] = entered_account
+            pending["is_raast"] = False
+            dialogue_service.set_state(db, session_id, "AWAITING_PIN", pending)
+            response_text = "Write your 4 digit pin." if detected_lang == "en" else "اپنا 4 ہندسوں کا پن لکھیں۔"
+        else:
+            display_name = bank_name if account_type == "Bank Transfer" else account_type
+            response_text = f"The {display_name} number must match the mock number: {expected_mock}." if detected_lang == "en" else f"براہ کرم {display_name} کا درست نمبر درج کریں: {expected_mock}۔"
+
+    elif state == "AWAITING_RAAST_ID":
+        import re
+        digits = re.sub(r'\D', '', transcription)
+        
+        pending = dialogue["pending_action"] or {}
+        recipient_name = pending.get("recipient_name", "")
+        
+        mock_raast_mapping = {
+            "Cafe": "03001111111",
+            "Coffee Shop": "03002222222",
+            "Tailor": "03003333333",
+            "School Fees": "03004444444",
+            "Ali": "03006666666",
+            "Ahmed": "03007777777",
+            "Farzam": "03000000000"
+        }
+        
+        MOCK_RAAST_NUMBER = mock_raast_mapping.get(recipient_name, "03331234567")
+        
+        if digits == MOCK_RAAST_NUMBER:
+            pending["recipient_account"] = digits
+            pending["is_raast"] = True
+            dialogue_service.set_state(db, session_id, "AWAITING_PIN", pending)
+            response_text = "Write your 4 digit pin." if detected_lang == "en" else "اپنا 4 ہندسوں کا پن لکھیں۔"
+        else:
+            response_text = f"The Raast number for {recipient_name} must match the mock number: {MOCK_RAAST_NUMBER}." if detected_lang == "en" else f"براہ کرم {recipient_name} کا موک راست نمبر درج کریں: {MOCK_RAAST_NUMBER}۔"
+
+    elif state == "AWAITING_REFERENCE_NUMBER":
+        import re
+        digits = re.sub(r'\D', '', transcription)
+        
+        pending = dialogue["pending_action"] or {}
+        recipient_name = pending.get("recipient_name", "")
+        
+        mock_reference_mapping = {
+            "Electricity Bill": "11223344",
+            "Water Bill": "55667788",
+            "Gas Bill": "99001122"
+        }
+        
+        MOCK_REF = mock_reference_mapping.get(recipient_name, "12345678")
+        
+        if digits == MOCK_REF:
+            pending["reference_number"] = digits
+            dialogue_service.set_state(db, session_id, "AWAITING_CONFIRMATION", pending)
+            response_text = tmpl.confirm_transfer_prompt(pending.get("recipient_name"), pending.get("amount"), detected_lang)
+        else:
+            response_text = f"The reference number for {recipient_name} must match the mock number: {MOCK_REF}." if detected_lang == "en" else f"براہ کرم {recipient_name} کا موک حوالہ نمبر (Reference Number) درج کریں: {MOCK_REF}۔"
+
     elif state == "AWAITING_CONFIRMATION":
         if intent == "confirm":
             pending = dialogue["pending_action"] or {}
@@ -292,8 +424,30 @@ async def _handle_voice_logic(
                 if match_result["matched"]:
                     contact = match_result["contact"]
                     pending = {"recipient_name": contact.full_name, "recipient_account": contact.account_number_masked, "amount": str(amount)}
-                    dialogue_service.set_state(db, session_id, "AWAITING_CONFIRMATION", pending)
-                    response_text = tmpl.confirm_transfer_prompt(contact.full_name, str(amount), detected_lang)
+                    
+                    if contact.full_name in ["Electricity Bill", "Water Bill", "Gas Bill"]:
+                        dialogue_service.set_state(db, session_id, "AWAITING_REFERENCE_NUMBER", pending)
+                        response_text = "براہ کرم بل کا حوالہ نمبر (Reference Number) بولیں یا لکھیں۔" if detected_lang == "ur" else "Please say or enter the bill reference number."
+                    elif contact.full_name in ["Ali", "Ahmed", "Farzam", "Bilal", "Usman", "Fatima", "Ayesha", "Saad", "Hamza"]:
+                        # Pre-fill account number for saved contacts to skip manual entry
+                        mock_saved_accounts = {
+                            "Ali": "03006666666",
+                            "Ahmed": "03007777777",
+                            "Farzam": "03000000000",
+                            "Bilal": "03011112222",
+                            "Usman": "03022223333",
+                            "Fatima": "03033334444",
+                            "Ayesha": "03044445555",
+                            "Saad": "03055556666",
+                            "Hamza": "03066667777"
+                        }
+                        pending["recipient_account"] = mock_saved_accounts.get(contact.full_name, "123456789")
+                        pending["is_raast"] = False
+                        dialogue_service.set_state(db, session_id, "AWAITING_PIN", pending)
+                        response_text = "Write your 4 digit pin." if detected_lang == "en" else "اپنا 4 ہندسوں کا پن لکھیں۔"
+                    else:
+                        dialogue_service.set_state(db, session_id, "AWAITING_PAYMENT_METHOD", pending)
+                        response_text = "کیا آپ اکاؤنٹ نمبر کے ذریعے پیسے بھیجنا چاہتے ہیں یا راست (Raast) کے ذریعے؟" if detected_lang == "ur" else "Do you want to send via Account Number or Raast?"
                 else:
                     response_text = "رابطہ نہیں ملا۔ نام دوبارہ بولیں۔" if detected_lang == "ur" else "Contact not found. Please repeat the name."
     else:

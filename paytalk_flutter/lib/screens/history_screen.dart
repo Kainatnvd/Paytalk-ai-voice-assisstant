@@ -1,7 +1,9 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/bento_card.dart';
+import '../widgets/mesh_gradient_background.dart';
 import '../models/transaction.dart';
 import '../services/api_service.dart';
 
@@ -76,136 +78,144 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // ── Ambient blur glow (top right) ──
-          Positioned(
-            top: 0,
-            right: 0,
-            child: Container(
-              width: 500,
-              height: 500,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary.withOpacity(0.03),
-              ),
-            ),
-          ),
-
-          SafeArea(
-            child: ValueListenableBuilder<int>(
-              valueListenable: ApiService.refreshNotifier,
-              builder: (context, refreshCount, _) {
-                // Trigger fetch if the notifier changes
-                // Note: initState/didChangeDependencies already handle initial load
-                return RefreshIndicator(
-                  color: AppColors.primary,
-                  onRefresh: _fetchData,
-                  child: CustomScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      // ── Sticky Header ──
-                      SliverToBoxAdapter(child: _buildHeader()),
-                      // ── Content ──
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 24),
-                        sliver: SliverList(
-                          delegate: SliverChildListDelegate([
-                            const SizedBox(height: 16),
-                            _buildSectionTitle('Recent Activity'),
-                            const SizedBox(height: 16),
-                            _isLoading
-                                ? const Center(
-                                    child: Padding(
-                                    padding: EdgeInsets.all(48),
-                                    child: CircularProgressIndicator(
-                                        color: AppColors.primary),
-                                  ))
-                                : _buildTransactionList(),
-                            const SizedBox(height: 40),
-                            _buildSectionTitle('Dashboard Bento'),
-                            const SizedBox(height: 16),
-                            _buildBentoGrid(),
-                            const SizedBox(height: 40),
-                            _buildFooter(),
-                            const SizedBox(height: 120),
-                          ]),
-                        ),
+      backgroundColor: AppColors.surface,
+      body: AnimatedGradientBlob(
+        child: SafeArea(
+          child: ValueListenableBuilder<int>(
+            valueListenable: ApiService.refreshNotifier,
+            builder: (context, refreshCount, _) {
+              return RefreshIndicator(
+                color: AppColors.primary,
+                onRefresh: _fetchData,
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    // ── Sticky Header ──
+                    SliverToBoxAdapter(child: _buildHeader()),
+                    // ── Content ──
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 24),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+                          const SizedBox(height: 16),
+                          _buildSectionTitle('Recent Activity'),
+                          const SizedBox(height: 16),
+                          _isLoading
+                              ? const Center(
+                                  child: Padding(
+                                  padding: EdgeInsets.all(48),
+                                  child: CircularProgressIndicator(
+                                      color: AppColors.primary),
+                                ))
+                              : _buildTransactionList(),
+                          const SizedBox(height: 40),
+                          _buildSectionTitle('Dashboard Bento'),
+                          const SizedBox(height: 16),
+                          _buildBentoGrid(),
+                          const SizedBox(height: 40),
+                          _buildFooter(),
+                          const SizedBox(height: 120),
+                        ]),
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
-        ],
+        ),
       ),
     );
   }
 
-  /// Header matching wireframe: "Account History" title + balance + notification bell
+  /// Header — frosted glass with liquid shine
   Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
-        border: Border(
-            bottom: BorderSide(color: AppColors.outlineVariant)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Account History',
-                    style: AppTypography.displayMedium
-                        .copyWith(fontSize: 24)),
-                const SizedBox(height: 4),
-                Text('Review your recent conduits and ledgers.',
-                    style: AppTypography.bodyMedium
-                        .copyWith(color: Colors.indigo.shade300)),
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withOpacity(0.5),
+                Colors.white.withOpacity(0.2),
               ],
             ),
+            border: Border(
+                bottom: BorderSide(color: Colors.white.withOpacity(0.3))),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'AVAILABLE BALANCE',
-                style: AppTypography.caption.copyWith(
-                  color: Colors.indigo.shade200,
-                  fontSize: 8,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Account History',
+                        style: AppTypography.displayMedium
+                            .copyWith(fontSize: 24)),
+                    const SizedBox(height: 4),
+                    Text('Review your recent conduits and ledgers.',
+                        style: AppTypography.bodyMedium
+                            .copyWith(color: AppColors.textMuted)),
+                  ],
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                '$_currency $_balance',
-                style: AppTypography.headlineLarge.copyWith(
-                  color: AppColors.primary,
-                  fontSize: 22,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'AVAILABLE BALANCE',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textMuted,
+                      fontSize: 8,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  ShaderMask(
+                    shaderCallback: (bounds) =>
+                        AppColors.primaryGradient.createShader(bounds),
+                    child: Text(
+                      '$_currency $_balance',
+                      style: AppTypography.headlineLarge.copyWith(
+                        color: Colors.white,
+                        fontSize: 22,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 12),
+              ClipOval(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary.withOpacity(0.12),
+                          AppColors.accent.withOpacity(0.08),
+                        ],
+                      ),
+                      border: Border.all(
+                          color: Colors.white.withOpacity(0.4)),
+                    ),
+                    child: const Icon(Icons.notifications,
+                        color: AppColors.primary, size: 22),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(width: 12),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.primaryContainer,
-              border: Border.all(
-                  color: AppColors.primary.withOpacity(0.1)),
-            ),
-            child: const Icon(Icons.notifications,
-                color: AppColors.primary, size: 22),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -221,7 +231,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               width: 4,
               height: 32,
               decoration: BoxDecoration(
-                color: AppColors.primary,
+                gradient: AppColors.accentGradient,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),

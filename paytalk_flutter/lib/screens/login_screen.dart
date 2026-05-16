@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -137,16 +138,21 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildLogo() {
     return Column(
       children: [
-        Text(
-          'PayTalk',
-          style: AppTypography.displayLarge
-              .copyWith(color: AppColors.primary, fontSize: 36),
+        ShaderMask(
+          shaderCallback: (bounds) =>
+              AppColors.primaryButtonGradient.createShader(bounds),
+          child: Text(
+            'PayTalk',
+            style: AppTypography.displayLarge
+                .copyWith(color: Colors.white, fontSize: 40),
+          ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Text(
           'NEXT-GEN FINANCIAL LEDGER',
           style: AppTypography.caption.copyWith(
-            color: AppColors.onSurfaceVariant.withOpacity(0.7),
+            color: AppColors.onSurfaceVariant.withOpacity(0.6),
+            letterSpacing: 3.0,
           ),
         ),
       ],
@@ -284,41 +290,48 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  InputDecoration _liquidGlassInputDecoration({
+    required IconData icon,
+    required String hint,
+  }) {
+    return InputDecoration(
+      prefixIcon: Padding(
+        padding: const EdgeInsets.only(left: 16, right: 12),
+        child: Icon(icon, color: AppColors.primary, size: 20),
+      ),
+      prefixIconConstraints:
+          const BoxConstraints(minWidth: 48, minHeight: 0),
+      hintText: hint,
+      hintStyle: AppTypography.bodyLarge
+          .copyWith(color: AppColors.textMuted.withOpacity(0.4)),
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.35),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide:
+            BorderSide(color: AppColors.primary.withOpacity(0.5), width: 2),
+      ),
+    );
+  }
+
   Widget _buildPhoneField() {
     return TextField(
       controller: _phoneController,
       keyboardType: TextInputType.phone,
       style: AppTypography.bodyLarge.copyWith(color: AppColors.onSurface),
-      decoration: InputDecoration(
-        prefixIcon: Padding(
-          padding: const EdgeInsets.only(left: 16, right: 12),
-          child:
-              Icon(Icons.phone_iphone, color: AppColors.primary, size: 20),
-        ),
-        prefixIconConstraints:
-            const BoxConstraints(minWidth: 48, minHeight: 0),
-        hintText: '+92 300 1234567',
-        hintStyle: AppTypography.bodyLarge
-            .copyWith(color: AppColors.primary.withOpacity(0.3)),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide:
-              BorderSide(color: AppColors.primary.withOpacity(0.1)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide:
-              BorderSide(color: AppColors.primary.withOpacity(0.1)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide:
-              BorderSide(color: AppColors.primary.withOpacity(0.4), width: 2),
-        ),
+      decoration: _liquidGlassInputDecoration(
+        icon: Icons.phone_iphone,
+        hint: '+92 300 1234567',
       ),
     );
   }
@@ -328,51 +341,20 @@ class _LoginScreenState extends State<LoginScreen> {
       controller: controller,
       keyboardType: type,
       style: AppTypography.bodyLarge.copyWith(color: AppColors.onSurface),
-      decoration: InputDecoration(
-        prefixIcon: Padding(
-          padding: const EdgeInsets.only(left: 16, right: 12),
-          child: Icon(icon, color: AppColors.primary, size: 20),
-        ),
-        prefixIconConstraints:
-            const BoxConstraints(minWidth: 48, minHeight: 0),
-        hintText: hint,
-        hintStyle: AppTypography.bodyLarge
-            .copyWith(color: AppColors.primary.withOpacity(0.3)),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide:
-              BorderSide(color: AppColors.primary.withOpacity(0.1)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide:
-              BorderSide(color: AppColors.primary.withOpacity(0.1)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide:
-              BorderSide(color: AppColors.primary.withOpacity(0.4), width: 2),
-        ),
-      ),
+      decoration: _liquidGlassInputDecoration(icon: icon, hint: hint),
     );
   }
 
   Widget _buildPasswordField() {
+    final decoration = _liquidGlassInputDecoration(
+      icon: Icons.lock,
+      hint: '••••••••••••',
+    );
     return TextField(
       controller: _passwordController,
       obscureText: _obscurePassword,
       style: AppTypography.bodyLarge.copyWith(color: AppColors.onSurface),
-      decoration: InputDecoration(
-        prefixIcon: Padding(
-          padding: const EdgeInsets.only(left: 16, right: 12),
-          child: Icon(Icons.lock, color: AppColors.primary, size: 20),
-        ),
-        prefixIconConstraints:
-            const BoxConstraints(minWidth: 48, minHeight: 0),
+      decoration: decoration.copyWith(
         suffixIcon: GestureDetector(
           onTap: () =>
               setState(() => _obscurePassword = !_obscurePassword),
@@ -389,28 +371,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         suffixIconConstraints:
             const BoxConstraints(minWidth: 48, minHeight: 0),
-        hintText: '••••••••••••',
-        hintStyle: AppTypography.bodyLarge
-            .copyWith(color: AppColors.primary.withOpacity(0.3)),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide:
-              BorderSide(color: AppColors.primary.withOpacity(0.1)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide:
-              BorderSide(color: AppColors.primary.withOpacity(0.1)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide:
-              BorderSide(color: AppColors.primary.withOpacity(0.4), width: 2),
-        ),
       ),
     );
   }
@@ -424,9 +384,14 @@ class _LoginScreenState extends State<LoginScreen> {
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: AppColors.primary.withOpacity(0.35),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
+          ),
+          BoxShadow(
+            color: AppColors.accent.withOpacity(0.12),
+            blurRadius: 40,
+            offset: const Offset(0, 20),
           ),
         ],
       ),
@@ -449,10 +414,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Text(_isRegistering ? 'Register' : 'Access Vault',
                       style: AppTypography.headlineSmall
-                          .copyWith(color: Colors.white)),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.arrow_forward,
-                      color: Colors.white, size: 20),
+                          .copyWith(color: Colors.white, letterSpacing: 0.5)),
+                  const SizedBox(width: 10),
+                  const Icon(Icons.arrow_forward_rounded,
+                      color: Colors.white, size: 22),
                 ],
               ),
       ),

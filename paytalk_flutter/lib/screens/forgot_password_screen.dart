@@ -158,21 +158,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         prefixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 0),
         hintText: hint,
-        hintStyle: AppTypography.bodyLarge.copyWith(color: AppColors.primary.withOpacity(0.3)),
+        hintStyle: AppTypography.bodyLarge.copyWith(color: AppColors.textMuted.withOpacity(0.4)),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: Colors.white.withOpacity(0.35),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.1)),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.1)),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.4), width: 2),
+          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.5), width: 2),
         ),
       ),
     );
@@ -202,21 +202,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         suffixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 0),
         hintText: '••••••••••••',
-        hintStyle: AppTypography.bodyLarge.copyWith(color: AppColors.primary.withOpacity(0.3)),
+        hintStyle: AppTypography.bodyLarge.copyWith(color: AppColors.textMuted.withOpacity(0.4)),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: Colors.white.withOpacity(0.35),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.1)),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.1)),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.4), width: 2),
+          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.5), width: 2),
         ),
       ),
     );
@@ -231,9 +231,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: AppColors.primary.withOpacity(0.35),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
+          ),
+          BoxShadow(
+            color: AppColors.accent.withOpacity(0.12),
+            blurRadius: 40,
+            offset: const Offset(0, 20),
           ),
         ],
       ),

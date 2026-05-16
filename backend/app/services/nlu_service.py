@@ -1,8 +1,7 @@
 import re
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
-import httpx
 from google import genai
 
 from app.core.config import settings
@@ -40,6 +39,12 @@ def _map_canonical_contact(raw_name: str) -> str:
     if "ali" in lower: return "Ali"
     if "ahmed" in lower: return "Ahmed"
     if "farzam" in lower: return "Farzam"
+    if "bilal" in lower: return "Bilal"
+    if "usman" in lower: return "Usman"
+    if "fatima" in lower: return "Fatima"
+    if "ayesha" in lower: return "Ayesha"
+    if "saad" in lower: return "Saad"
+    if "hamza" in lower: return "Hamza"
         
     return raw_name
 
@@ -120,7 +125,7 @@ def classify_intent(text: str) -> Dict[str, Any]:
             """
             
             response = client.models.generate_content(
-                model='gemini-3.1-flash-lite-preview',
+                model='gemini-2.0-flash',
                 contents=prompt,
             )
             resp_text = response.text.strip()

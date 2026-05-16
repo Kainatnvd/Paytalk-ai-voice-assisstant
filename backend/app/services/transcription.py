@@ -1,13 +1,17 @@
 import os
 import time
+from pathlib import Path
 from groq import Groq
 from dotenv import load_dotenv
 from app.services import stt_service
 
-# Load environment variables from .env
-load_dotenv()
+# Load environment variables from project root .env
+# transcription.py → services/ → app/ → backend/ → project_root/
+_env_path = Path(__file__).resolve().parents[3] / ".env"
+load_dotenv(_env_path)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+print(f"[Transcription] GROQ_API_KEY loaded: {'Yes' if GROQ_API_KEY and GROQ_API_KEY != 'your_api_key_here' else 'No'}")
 
 def transcribe_audio(audio_path: str, language: str = "ur") -> dict:
     """
@@ -36,6 +40,12 @@ def transcribe_audio(audio_path: str, language: str = "ur") -> dict:
                         model="whisper-large-v3-turbo",
                         # Removing forced language to allow auto-detection (EN/UR)
                         response_format="verbose_json",
+                        prompt=(
+                            "PayTalk voice banking. Commands: "
+                            "send 500 to Cafe, send 1000 to Ali, send 200 to Ahmed, "
+                            "transfer 3000 to Farzam, pay Electricity Bill, pay Water Bill, "
+                            "send money to Tailor, check balance, transaction history."
+                        ),
                     )
                 
                 # Detect the language from the result or fallback to 'ur'

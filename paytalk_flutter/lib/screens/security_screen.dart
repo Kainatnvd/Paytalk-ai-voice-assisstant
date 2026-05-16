@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:record/record.dart';
@@ -9,6 +10,7 @@ import 'package:path/path.dart' as p;
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/bento_card.dart';
+import '../widgets/mesh_gradient_background.dart';
 import '../services/api_service.dart';
 
 /// Security Screen — exact replication of security_fixed_layout wireframe.
@@ -157,65 +159,37 @@ class _SecurityScreenState extends State<SecurityScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // ── Background Ambient Blurs ──
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.25,
-            left: -80,
-            child: Container(
-              width: 400,
-              height: 400,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary.withOpacity(0.04),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: MediaQuery.of(context).size.height * 0.25,
-            right: -80,
-            child: Container(
-              width: 400,
-              height: 400,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.secondary.withOpacity(0.04),
-              ),
-            ),
-          ),
-
-          SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 32),
-                        _buildTransactionBadge(),
-                        const SizedBox(height: 24),
-                        _buildConfirmingAmount(),
-                        const SizedBox(height: 48),
-                        _buildOtpPrompt(),
-                        const SizedBox(height: 32),
-                        _buildOtpDigits(),
-                        const SizedBox(height: 48),
-                        _buildVoiceOrb(),
-                        const SizedBox(height: 64),
-                        _buildBentoDetails(),
-                        const SizedBox(height: 120),
-                      ],
-                    ),
+      backgroundColor: AppColors.surface,
+      body: AnimatedGradientBlob(
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 32),
+                      _buildTransactionBadge(),
+                      const SizedBox(height: 24),
+                      _buildConfirmingAmount(),
+                      const SizedBox(height: 48),
+                      _buildOtpPrompt(),
+                      const SizedBox(height: 32),
+                      _buildOtpDigits(),
+                      const SizedBox(height: 48),
+                      _buildVoiceOrb(),
+                      const SizedBox(height: 64),
+                      _buildBentoDetails(),
+                      const SizedBox(height: 120),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -377,28 +351,44 @@ class _SecurityScreenState extends State<SecurityScreen>
       children: List.generate(6, (index) {
         bool isActive = index == _activeDigit;
         bool isFilled = _otpDigits[index].isNotEmpty;
-        return Container(
-          width: 52,
-          height: 64,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            color: isActive ? Colors.white : const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isActive
-                  ? AppColors.primary
-                  : const Color(0xFFF1F5F9),
-              width: isActive ? 2 : 1,
-            ),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.1),
-                      blurRadius: 10,
-                    )
-                  ]
-                : null,
-          ),
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              width: 52,
+              height: 64,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isActive
+                      ? [
+                          Colors.white.withOpacity(0.6),
+                          Colors.white.withOpacity(0.3),
+                        ]
+                      : [
+                          Colors.white.withOpacity(0.35),
+                          Colors.white.withOpacity(0.15),
+                        ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isActive
+                      ? AppColors.primary.withOpacity(0.6)
+                      : Colors.white.withOpacity(0.3),
+                  width: isActive ? 2 : 1.5,
+                ),
+                boxShadow: isActive
+                    ? [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.15),
+                          blurRadius: 15,
+                        )
+                      ]
+                    : null,
+              ),
           child: Center(
             child: isActive && !isFilled
                 ? AnimatedBuilder(
@@ -424,6 +414,8 @@ class _SecurityScreenState extends State<SecurityScreen>
                     ),
                   ),
           ),
+          ),
+        ),
         );
       }),
     );

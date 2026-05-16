@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:record/record.dart';
@@ -8,12 +9,14 @@ import 'package:path/path.dart' as p;
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/mesh_gradient_background.dart';
 import '../models/chat_message.dart';
 import '../services/api_service.dart';
 import '../widgets/bottom_dock.dart';
 
 import 'transaction_otp_screen.dart';
 import 'transaction_pin_screen.dart';
+import 'number_input_screen.dart';
 
 /// Dashboard Screen — exact replication of dashboard_light_theme wireframe.
 /// Voice assistant hub with ethereal orb, mic button, and chat bubbles.
@@ -101,6 +104,10 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     if (_isRecording) {
       setState(() => _isProcessingRecording = true);
+
+      // Brief delay to capture trailing audio (prevents last word being clipped)
+      await Future.delayed(const Duration(milliseconds: 500));
+
       final path = await _audioRecorder.stop();
       setState(() => _isRecording = false);
 
@@ -201,6 +208,13 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (data['dialogue_state'] == 'AWAITING_OTP') {
           _navigateToOtp(data);
         }
+
+        // Check if we need to navigate to Number Input screen
+        if (data['dialogue_state'] == 'AWAITING_RAAST_ID' ||
+            data['dialogue_state'] == 'AWAITING_REFERENCE_NUMBER' ||
+            data['dialogue_state'] == 'AWAITING_ACCOUNT_NUMBER') {
+          _navigateToNumberInput(data);
+        }
       } else {
         setState(() {
           _messages.removeLast();
@@ -250,6 +264,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         });
       } else if (data['dialogue_state'] == 'AWAITING_OTP') {
         _navigateToOtp(data);
+      } else if (data['dialogue_state'] == 'AWAITING_RAAST_ID' ||
+                 data['dialogue_state'] == 'AWAITING_REFERENCE_NUMBER' ||
+                 data['dialogue_state'] == 'AWAITING_ACCOUNT_NUMBER') {
+        _navigateToNumberInput(data);
       }
     }
   }
@@ -269,149 +287,179 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
+  void _navigateToNumberInput(Map<String, dynamic> data) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => NumberInputScreen(
+          dialogueState: data['dialogue_state'],
+          pendingAction: data['pending_action'] ?? {},
+        ),
+      ),
+    ).then((result) {
+      if (result != null && result is Map<String, dynamic>) {
+        _handleDialogueState(result);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      body: Stack(
-        children: [
-          // ── Ambient Orb Glow ──
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.15,
-            left: MediaQuery.of(context).size.width * 0.5 - 300,
-            child: Container(
-              width: 600,
-              height: 600,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.primary.withOpacity(0.08),
-                    AppColors.primary.withOpacity(0.02),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          SafeArea(
-            child: RefreshIndicator(
-              color: AppColors.primary,
-              onRefresh: _fetchData,
-              child: Column(
-                children: [
-                  _buildHeader(),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      controller: _scrollController,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
-                        children: [
-                          const SizedBox(height: 32),
-                          _buildEtherealOrb(),
-                          const SizedBox(height: 32),
-                          _buildVoiceStatus(),
-                          const SizedBox(height: 24),
-                          _buildMicButton(),
-                          const SizedBox(height: 48),
-                          _buildChatInterface(),
-                          const SizedBox(height: 120),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Top header bar matching wireframe: Avatar + "Hello, Alex" + PayTalk + Balance pill
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.7),
-        border: Border(
-            bottom: BorderSide(color: AppColors.outlineVariant)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Row(
+      body: AnimatedGradientBlob(
+        child: SafeArea(
+          child: RefreshIndicator(
+            color: AppColors.primary,
+            onRefresh: _fetchData,
+            child: Column(
               children: [
-                // Profile avatar
-                GestureDetector(
-                  onLongPress: () async {
-                    await _apiService.logout();
-                    if (mounted) {
-                      Navigator.pushReplacementNamed(context, '/');
-                    }
-                  },
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.surfaceContainerHighest,
-                      border:
-                          Border.all(color: AppColors.outline),
+                _buildHeader(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 32),
+                        _buildEtherealOrb(),
+                        const SizedBox(height: 32),
+                        _buildVoiceStatus(),
+                        const SizedBox(height: 24),
+                        _buildMicButton(),
+                        const SizedBox(height: 48),
+                        _buildChatInterface(),
+                        const SizedBox(height: 120),
+                      ],
                     ),
-                    child: const Icon(Icons.person,
-                        color: AppColors.primary, size: 24),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Hello, $_userName',
-                        style: AppTypography.bodySmall
-                            .copyWith(color: AppColors.textMuted),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        'PayTalk',
-                        style: AppTypography.headlineLarge.copyWith(
-                          color: AppColors.primary,
-                          fontSize: 20,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          // Balance pill
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.primaryContainer,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                  color: AppColors.primary.withOpacity(0.1)),
+        ),
+      ),
+    );
+  }
+
+  /// Top header bar — frosted glass with liquid shine
+  Widget _buildHeader() {
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withOpacity(0.5),
+                Colors.white.withOpacity(0.2),
+              ],
             ),
-            child: Text(
-              _balance,
-              style: AppTypography.headlineSmall.copyWith(
-                color: AppColors.onPrimaryContainer,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            border: Border(
+                bottom: BorderSide(color: Colors.white.withOpacity(0.3))),
           ),
-        ],
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    // Profile avatar
+                    GestureDetector(
+                      onLongPress: () async {
+                        await _apiService.logout();
+                        if (mounted) {
+                          Navigator.pushReplacementNamed(context, '/');
+                        }
+                      },
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppColors.primary.withOpacity(0.15),
+                              AppColors.accent.withOpacity(0.1),
+                            ],
+                          ),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.5),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: const Icon(Icons.person,
+                            color: AppColors.primary, size: 22),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Hello, $_userName',
+                            style: AppTypography.bodySmall
+                                .copyWith(color: AppColors.textMuted),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          ShaderMask(
+                            shaderCallback: (bounds) =>
+                                AppColors.primaryGradient.createShader(bounds),
+                            child: Text(
+                              'PayTalk',
+                              style: AppTypography.headlineLarge.copyWith(
+                                color: Colors.white,
+                                fontSize: 20,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Balance pill — frosted glass
+              ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary.withOpacity(0.12),
+                          AppColors.accent.withOpacity(0.08),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                          color: Colors.white.withOpacity(0.4)),
+                    ),
+                    child: Text(
+                      _balance,
+                      style: AppTypography.headlineSmall.copyWith(
+                        color: AppColors.onPrimaryContainer,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -532,60 +580,61 @@ class _DashboardScreenState extends State<DashboardScreen>
                 }
               ),
 
-            // ── Center glass circle ──
-            Container(
-              width: 160,
-              height: 160,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withOpacity(_isRecording ? 0.7 : 0.55),
-                    Colors.white.withOpacity(_isRecording ? 0.5 : 0.35),
-                    const Color(0xFFEEF2FF).withOpacity(0.3),
-                  ],
-                ),
-                border: Border.all(
-                  color: _isRecording 
-                      ? const Color(0xFF6366F1).withOpacity(0.35)
-                      : const Color(0xFF818CF8).withOpacity(0.12),
-                  width: _isRecording ? 2.0 : 1.0,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF6366F1).withOpacity(_isRecording ? 0.2 : 0.08),
-                    blurRadius: _isRecording ? 40 : 20,
-                    spreadRadius: _isRecording ? 8 : 2,
-                  ),
-                  BoxShadow(
-                    color: Colors.white.withOpacity(0.8),
-                    blurRadius: 10,
-                    spreadRadius: -5,
-                    offset: const Offset(-2, -2),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: AnimatedBuilder(
-                  animation: _orbController,
-                  builder: (context, _) {
-                    return ShaderMask(
-                      shaderCallback: (Rect bounds) {
-                        return const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF6366F1), Color(0xFF818CF8)],
-                        ).createShader(bounds);
-                      },
-                      child: Icon(
-                        _isRecording ? Icons.graphic_eq : Icons.auto_awesome,
-                        size: _isRecording ? 44 : 36,
-                        color: Colors.white,
+            // ── Center glass circle — liquid glass ──
+            ClipOval(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                child: Container(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withOpacity(_isRecording ? 0.6 : 0.4),
+                        Colors.white.withOpacity(_isRecording ? 0.3 : 0.15),
+                        AppColors.accent.withOpacity(0.05),
+                      ],
+                    ),
+                    border: Border.all(
+                      color: _isRecording 
+                          ? Colors.white.withOpacity(0.6)
+                          : Colors.white.withOpacity(0.35),
+                      width: _isRecording ? 2.0 : 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(_isRecording ? 0.25 : 0.1),
+                        blurRadius: _isRecording ? 50 : 25,
+                        spreadRadius: _isRecording ? 8 : 2,
                       ),
-                    );
-                  },
+                      BoxShadow(
+                        color: AppColors.accent.withOpacity(_isRecording ? 0.15 : 0.05),
+                        blurRadius: 30,
+                        spreadRadius: -5,
+                        offset: const Offset(4, 4),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: AnimatedBuilder(
+                      animation: _orbController,
+                      builder: (context, _) {
+                        return ShaderMask(
+                          shaderCallback: (Rect bounds) {
+                            return AppColors.accentGradient.createShader(bounds);
+                          },
+                          child: Icon(
+                            _isRecording ? Icons.graphic_eq : Icons.auto_awesome,
+                            size: _isRecording ? 44 : 36,
+                            color: Colors.white,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -623,53 +672,73 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  /// Mic button matching wireframe: large circular primary btn with shadow
+  /// Mic button — premium gradient with liquid glass glow
   Widget _buildMicButton() {
     return Container(
       key: _micKey,
       child: GestureDetector(
         onTap: _isProcessingRecording ? null : _toggleRecording,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Pulse ring on recording
-            if (_isRecording)
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.primary.withOpacity(0.1),
-                    width: 4,
+        child: AnimatedBuilder(
+          animation: _orbController,
+          builder: (context, _) {
+            final pulseSize = _isRecording
+                ? 110.0 + (15 * _orbController.value)
+                : 100.0;
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                // Pulse ring on recording
+                if (_isRecording)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: pulseSize,
+                    height: pulseSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.error.withOpacity(0.2 * (1 - _orbController.value)),
+                        width: 3,
+                      ),
+                    ),
+                  ),
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: _isRecording
+                        ? const LinearGradient(
+                            colors: [Color(0xFFF43F5E), Color(0xFFEF4444)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : AppColors.primaryButtonGradient,
+                    boxShadow: [
+                      BoxShadow(
+                        color: (_isRecording
+                                ? AppColors.error
+                                : AppColors.primary)
+                            .withOpacity(0.4),
+                        blurRadius: 30,
+                        offset: const Offset(0, 8),
+                      ),
+                      if (!_isRecording)
+                        BoxShadow(
+                          color: AppColors.accent.withOpacity(0.15),
+                          blurRadius: 40,
+                          offset: const Offset(0, 12),
+                        ),
+                    ],
+                  ),
+                  child: Icon(
+                    _isRecording ? Icons.stop_rounded : Icons.mic,
+                    size: 36,
+                    color: Colors.white,
                   ),
                 ),
-              ),
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color:
-                    _isRecording ? Colors.redAccent : AppColors.primary,
-                boxShadow: [
-                  BoxShadow(
-                    color: (_isRecording
-                            ? Colors.redAccent
-                            : AppColors.primary)
-                        .withOpacity(0.3),
-                    blurRadius: 30,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Icon(
-                _isRecording ? Icons.stop : Icons.mic,
-                size: 36,
-                color: Colors.white,
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );
@@ -801,22 +870,39 @@ class _DashboardScreenState extends State<DashboardScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Flexible(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.primaryContainer,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-              border:
-                  Border.all(color: AppColors.primary.withOpacity(0.1)),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
             ),
-            child: Text(
-              text,
-              style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.onPrimaryContainer, height: 1.5),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.primary.withOpacity(0.15),
+                      AppColors.accent.withOpacity(0.08),
+                    ],
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                  border: Border.all(
+                      color: Colors.white.withOpacity(0.35)),
+                ),
+                child: Text(
+                  text,
+                  style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.onPrimaryContainer, height: 1.5),
+                ),
+              ),
             ),
           ),
         ),
@@ -827,8 +913,13 @@ class _DashboardScreenState extends State<DashboardScreen>
           height: 32,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.surfaceContainerHighest,
-            border: Border.all(color: AppColors.outline),
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary.withOpacity(0.15),
+                AppColors.accent.withOpacity(0.1),
+              ],
+            ),
+            border: Border.all(color: Colors.white.withOpacity(0.4)),
           ),
           child: const Icon(Icons.person, size: 16, color: AppColors.primary),
         ),

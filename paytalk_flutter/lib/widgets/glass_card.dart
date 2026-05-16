@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 /// Glassmorphic card widget matching the wireframe "glass-card" CSS class.
@@ -24,17 +25,29 @@ class GlassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
-      child: Container(
-        padding: padding,
-        decoration: BoxDecoration(
-          color: color ?? Colors.white.withOpacity(0.7),
-          borderRadius: BorderRadius.circular(borderRadius),
-          border: Border.all(
-            color: const Color(0xFF6366F1).withOpacity(0.1),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            color: color ?? Colors.white.withOpacity(0.15),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withOpacity(0.4),
+                Colors.white.withOpacity(0.1),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.3),
+              width: 1.5,
+            ),
+            boxShadow: boxShadow,
           ),
-          boxShadow: boxShadow,
+          child: child,
         ),
-        child: child,
       ),
     );
   }

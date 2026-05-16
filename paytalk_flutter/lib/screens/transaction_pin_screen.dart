@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
+import '../widgets/mesh_gradient_background.dart';
 import '../services/api_service.dart';
 
 class TransactionPinScreen extends StatefulWidget {
@@ -76,67 +77,89 @@ class _TransactionPinScreenState extends State<TransactionPinScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
         title: const Text('Security Verification'),
         elevation: 0,
         backgroundColor: Colors.transparent,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const SizedBox(height: 48),
-            const Icon(Icons.lock_outline, size: 80, color: AppColors.primary),
-            const SizedBox(height: 32),
-            Text(
-              'Enter Transaction PIN',
-              style: AppTypography.headlineLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Verify your transfer of PKR ${widget.pendingAction['amount']}',
-              style: AppTypography.bodyLarge.copyWith(color: AppColors.textMuted),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 48),
-            
-            // PIN manual inputs
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(4, (index) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: _buildPinBox(index),
-              )),
-            ),
-            
-            const SizedBox(height: 48),
-            
-            if (_isLoading)
-              const CircularProgressIndicator()
-            else
-              ElevatedButton(
-                onPressed: () {
-                  String pin = _controllers.map((e) => e.text).join();
-                  if (pin.length == 4) {
-                    _submitPin(pin);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 56),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 4,
-                ),
-                child: const Text('Verify PIN'),
+      body: AnimatedGradientBlob(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              const SizedBox(height: 48),
+              ShaderMask(
+                shaderCallback: (bounds) =>
+                    AppColors.primaryGradient.createShader(bounds),
+                child: const Icon(Icons.lock_outline, size: 80, color: Colors.white),
               ),
-            
-            const SizedBox(height: 24),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel Transaction', style: TextStyle(color: Colors.redAccent)),
-            ),
-          ],
+              const SizedBox(height: 32),
+              Text(
+                'Enter Transaction PIN',
+                style: AppTypography.headlineLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Verify your transfer of PKR ${widget.pendingAction['amount']}',
+                style: AppTypography.bodyLarge.copyWith(color: AppColors.textMuted),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 48),
+              
+              // PIN manual inputs
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(4, (index) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: _buildPinBox(index),
+                )),
+              ),
+              
+              const SizedBox(height: 48),
+              
+              if (_isLoading)
+                const CircularProgressIndicator(color: AppColors.primary)
+              else
+                Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryButtonGradient,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.35),
+                        blurRadius: 24,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      String pin = _controllers.map((e) => e.text).join();
+                      if (pin.length == 4) {
+                        _submitPin(pin);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: Text('Verify PIN',
+                        style: AppTypography.headlineSmall.copyWith(color: Colors.white)),
+                  ),
+                ),
+              
+              const SizedBox(height: 24),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancel Transaction',
+                    style: AppTypography.labelLarge.copyWith(color: AppColors.error)),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -157,14 +180,14 @@ class _TransactionPinScreenState extends State<TransactionPinScreen> {
         decoration: InputDecoration(
           counterText: '',
           filled: true,
-          fillColor: AppColors.primary.withOpacity(0.05),
+          fillColor: Colors.white.withOpacity(0.35),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: AppColors.primary.withOpacity(0.2)),
+            borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: AppColors.primary, width: 2),
+            borderSide: BorderSide(color: AppColors.primary.withOpacity(0.6), width: 2),
           ),
         ),
         onChanged: (value) {

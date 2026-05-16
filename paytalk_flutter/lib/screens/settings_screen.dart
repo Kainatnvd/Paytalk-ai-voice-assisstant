@@ -1,7 +1,9 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/bento_card.dart';
+import '../widgets/mesh_gradient_background.dart';
 import '../services/api_service.dart';
 
 /// Settings Screen — profile info and account management.
@@ -71,24 +73,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: AppColors.primary))
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Header ──
-                    Text('Settings',
-                        style: AppTypography.displayMedium.copyWith(fontSize: 28)),
-                    const SizedBox(height: 4),
-                    Text('Manage your account preferences.',
-                        style: AppTypography.bodyMedium
-                            .copyWith(color: Colors.indigo.shade300)),
-                    const SizedBox(height: 32),
+      backgroundColor: AppColors.surface,
+      body: AnimatedGradientBlob(
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(color: AppColors.primary))
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Header ──
+                      Text('Settings',
+                          style: AppTypography.displayMedium.copyWith(fontSize: 28)),
+                      const SizedBox(height: 4),
+                      Text('Manage your account preferences.',
+                          style: AppTypography.bodyMedium
+                              .copyWith(color: AppColors.textMuted)),
+                      const SizedBox(height: 32),
 
                     // ── Profile Card ──
                     BentoCard(
@@ -101,9 +104,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             height: 56,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: AppColors.primaryContainer,
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColors.primary.withOpacity(0.15),
+                                  AppColors.accent.withOpacity(0.1),
+                                ],
+                              ),
                               border: Border.all(
-                                  color: AppColors.primary.withOpacity(0.2)),
+                                  color: Colors.white.withOpacity(0.4),
+                                  width: 1.5),
                             ),
                             child: Center(
                               child: Text(
@@ -123,7 +132,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 const SizedBox(height: 2),
                                 Text(_phone,
                                     style: AppTypography.bodySmall
-                                        .copyWith(color: Colors.indigo.shade300)),
+                                        .copyWith(color: AppColors.textMuted)),
                               ],
                             ),
                           ),
@@ -131,12 +140,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: AppColors.primaryContainer,
+                              gradient: AppColors.accentGradient,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text('Premium',
                                 style: AppTypography.labelMedium
-                                    .copyWith(color: AppColors.primary, fontSize: 11)),
+                                    .copyWith(color: Colors.white, fontSize: 11)),
                           ),
                         ],
                       ),
@@ -235,6 +244,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
               ),
+        ),
       ),
     );
   }
@@ -253,7 +263,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withOpacity(0.12),
+                      AppColors.accent.withOpacity(0.08),
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: AppColors.primary, size: 20),
@@ -267,7 +282,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         style: AppTypography.headlineSmall.copyWith(fontSize: 15)),
                     Text(subtitle,
                         style: AppTypography.bodySmall
-                            .copyWith(color: Colors.indigo.shade300, fontSize: 12)),
+                            .copyWith(color: AppColors.textMuted, fontSize: 12)),
                   ],
                 ),
               ),
