@@ -87,51 +87,71 @@ def classify_intent(text: str) -> Dict[str, Any]:
         print("[NLU] Gemini Key missing. Using Rule-based Matcher.")
         return _keyword_classify(text)
 
-    try:
-        client = genai.Client(api_key=settings.GOOGLE_API_KEY)
-        
-        prompt = f"""
-        You are an AI NLU engine for a banking app called PayTalk. 
-        Analyze the user's voice command: "{text}"
-        
-        Available Intents:
-        - check_balance
-        - transfer_money (Needs entities: "amount" (int), "recipient" (string))
-        - transaction_history
-        - get_account_info
-        - confirm
-        - cancel
-        
-        Output format: Return ONLY a valid compact JSON object.
-        Example: {{"intent": "transfer_money", "confidence": 0.95, "entities": {{"amount": 500, "recipient": "Cafe"}}}}
-        """
-        
-        response = client.models.generate_content(
-            model='gemini-3.1-flash-lite-preview',
-            contents=prompt,
-        )
-        resp_text = response.text.strip()
-        
-        # Clean up possible markdown code blocks from LLM response
-        if "```json" in resp_text:
-            resp_text = resp_text.split("```json")[1].split("```")[0].strip()
-        elif "```" in resp_text:
-            resp_text = resp_text.split("```")[1].strip()
+    import time
+    max_retries = 3
+    retry_delay = 1
+    client = genai.Client(api_key=settings.GOOGLE_API_KEY)
 
-        data = json.loads(resp_text)
-        
-        # Apply canonical mapping to Gemini's extracted recipient
-        entities_data = data.get("entities", {})
-        if "recipient" in entities_data:
-            entities_data["recipient"] = _map_canonical_contact(entities_data["recipient"])
+    for attempt in range(max_retries):
+        try:
+            prompt = f"""
+            You are an AI NLU engine for a banking app called PayTalk. 
+            Analyze the user's voice command: "{text}"
             
-        print(f"[NLU] Gemini Result: {data['intent']} ({data['confidence']})")
-        return {
-            "intent": data.get("intent", "unknown"),
-            "confidence": data.get("confidence", 0.0),
-            "entities": entities_data
-        }
+            Available Intents:
+            - check_balance
+            - transfer_money (Entities: "amount" (int), "recipient" (string))
+            - transaction_history
+            - get_account_info
+            - confirm
+            - cancel
+            
+            Strict Rules:
+            1. Return ONLY valid JSON.
+            2. If intent is unclear, return "unknown".
+            3. For transfer_money, extract amount as an integer and recipient as a string.
+            
+            Format: {{
+                "intent": "intent_name", 
+                "confidence": 0.0-1.0, 
+                "entities": {{}},
+                "nastaliq_urdu": "The transcription translated to proper Urdu script (Nastaliq). IMPORTANT: If input is Hindi (Devanagari) or Roman Urdu, this field MUST be the Nastaliq Urdu version."
+            }}
+            """
+            
+            response = client.models.generate_content(
+                model='gemini-3.1-flash-lite-preview',
+                contents=prompt,
+            )
+            resp_text = response.text.strip()
+            
+            # Clean up markdown
+            if "```json" in resp_text:
+                resp_text = resp_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in resp_text:
+                resp_text = resp_text.split("```")[1].strip()
 
-    except Exception as e:
-        print(f"[NLU] Gemini Error: {e}. Falling back to Rule-based Matcher.")
-        return _keyword_classify(text)
+            data = json.loads(resp_text)
+            
+            entities_data = data.get("entities", {})
+            if "recipient" in entities_data:
+                entities_data["recipient"] = _map_canonical_contact(entities_data["recipient"])
+                
+            print(f"[NLU] Gemini Result: {data.get('intent')} ({data.get('confidence')})")
+            return {
+                "intent": data.get("intent", "unknown") or "unknown",
+                "confidence": data.get("confidence", 0.0),
+                "entities": entities_data,
+                "nastaliq_urdu": data.get("nastaliq_urdu")
+            }
+
+        except Exception as e:
+            err_str = str(e)
+            if ("503" in err_str or "quota" in err_str.lower()) and attempt < max_retries - 1:
+                print(f"[NLU] Gemini busy (503/Quota). Retrying in {retry_delay}s... ({attempt+1}/{max_retries})")
+                time.sleep(retry_delay)
+                retry_delay *= 2
+                continue
+            
+            print(f"[NLU] Gemini Error: {err_str}. Falling back to Rule-based.")
+            return _keyword_classify(text)

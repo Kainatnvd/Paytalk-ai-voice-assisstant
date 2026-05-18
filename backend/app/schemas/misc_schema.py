@@ -1,6 +1,8 @@
 from typing import Any, Dict, List, Optional, Union
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from uuid import UUID
+
+from app.core.sanitization import sanitise_field
 
 
 # ─── Voice ────────────────────────────────────────────────────────────────────
@@ -20,12 +22,24 @@ class VoiceProcessResponse(BaseModel):
     payload: Optional[Dict[str, Any]] = None
 
 
+class TextInputRequest(BaseModel):
+    text: str
+    nonce: str
+
+
 # ─── NFC ──────────────────────────────────────────────────────────────────────
 
 class NfcVerifyRequest(BaseModel):
     cnic_hash: str                  # SHA-256 hex from NFC scan
     user_id: UUID
     device_info: Optional[str] = None
+
+    @field_validator("device_info", mode="before")
+    @classmethod
+    def sanitise_device_info(cls, v):
+        if v is not None:
+            return sanitise_field("device_info", v)
+        return v
 
 
 class NfcVerifyResponse(BaseModel):
@@ -43,6 +57,13 @@ class NfcMockRequest(BaseModel):
 class SdkKeyCreateRequest(BaseModel):
     partner_id: int
     label: Optional[str] = "Default"
+
+    @field_validator("label", mode="before")
+    @classmethod
+    def sanitise_label(cls, v):
+        if v is not None:
+            return sanitise_field("label", v)
+        return v
 
 
 class SdkKeyResponse(BaseModel):

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.models.auth_session import AuthSession
 
-VALID_STATES = {"IDLE", "AWAITING_CONFIRMATION", "AWAITING_OTP", "EXECUTING", "COMPLETE"}
+VALID_STATES = {"IDLE", "AWAITING_CONFIRMATION", "AWAITING_PIN", "AWAITING_OTP", "EXECUTING", "COMPLETE"}
 
 
 def get_state(db: Session, session_id: int) -> dict:

@@ -22,9 +22,14 @@ class Settings(BaseSettings):
     # Raast
     RAAST_SANDBOX_URL: str = "https://sandbox.raast.sbp.org.pk"
     RAAST_API_KEY: str = ""
+    RAAST_SANDBOX_ENABLED: bool = True  # Toggle real API calls
 
-    # Whisper
-    WHISPER_MODEL_SIZE: str = "base"
+    # Whisper / STT
+    STT_ENGINE: str = "gemini"  # "local" (Whisper) or "gemini" (Cloud)
+    WHISPER_MODEL_SIZE: str = "medium"
+
+    # Audio upload security
+    MAX_AUDIO_UPLOAD_MB: int = 10       # Max audio upload size in megabytes
 
     # Rasa
     RASA_URL: str = "http://localhost:5005"

@@ -5,6 +5,7 @@ from typing import List
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.core.sanitization import sanitise_field
 from app.core.security import get_current_user
 from app.database.database import get_db
 from app.models.sdk_api_key import SdkApiKey
@@ -25,6 +26,7 @@ def get_logs(
     """Fetch recent system logs, optionally filtered by service name."""
     query = db.query(SystemLog).order_by(SystemLog.created_at.desc())
     if service:
+        service = sanitise_field("service", service)
         query = query.filter(SystemLog.service == service)
     return query.limit(limit).all()
 

@@ -1,5 +1,6 @@
 import hashlib
 import secrets
+import struct
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -14,6 +15,7 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.secrets_manager import secrets_manager
 from app.database.database import get_db
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -40,15 +42,19 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     )
     jti = secrets.token_hex(16)
     to_encode.update({"exp": expire, "jti": jti})
-    token = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    active_key = secrets_manager.get_active_jwt_key()
+    token = jwt.encode(to_encode, active_key, algorithm=settings.ALGORITHM)
     return token, jti
 
 
 def decode_access_token(token: str) -> dict:
-    try:
-        return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-    except JWTError:
-        raise HTTPException(
+    for rec in secrets_manager.jwt_keys:
+        try:
+            return jwt.decode(token, rec.key, algorithms=[settings.ALGORITHM])
+        except JWTError:
+            continue
+            
+    raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
@@ -62,37 +68,106 @@ def normalize_cnic(cnic: str) -> str:
     return cnic.replace("-", "").strip()
 
 
-def hash_cnic(cnic: str) -> str:
-    """SHA-256 hash of CNIC for fast lookup/matching."""
-    return hashlib.sha256(cnic.encode()).hexdigest()
+def hash_cnic(cnic: str, salt: str = "default_static_salt_for_migration") -> str:
+    """Salted SHA-256 hash of CNIC."""
+    salted = cnic + salt
+    return hashlib.sha256(salted.encode()).hexdigest()
 
 
-def _get_aes_key() -> bytes:
-    key = settings.AES_ENCRYPTION_KEY.encode()
-    return key[:32].ljust(32, b"\x00")
+def hash_phone_number(phone: str) -> str:
+    """
+    Searchable hash for phone numbers. 
+    Uses a static salt from settings to ensure it can be computed for queries.
+    """
+    static_salt = settings.SECRET_KEY # Use the app's secret key as salt
+    salted = phone + static_salt
+    return hashlib.sha256(salted.encode()).hexdigest()
 
 
-def encrypt_cnic(cnic: str) -> bytes:
-    """AES-256-CBC encryption. Returns iv + ciphertext."""
-    key = _get_aes_key()
-    iv = secrets.token_bytes(16)
-    padder = padding.PKCS7(128).padder()
-    padded = padder.update(cnic.encode()) + padder.finalize()
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
-    encryptor = cipher.encryptor()
-    ciphertext = encryptor.update(padded) + encryptor.finalize()
-    return iv + ciphertext
+def _get_aes_key_and_version() -> tuple[bytes, str]:
+    rec = secrets_manager.get_active_aes_record()
+    key = rec.key.encode()[:32].ljust(32, b"\x00")
+    return key, rec.version
 
 
-def decrypt_cnic(encrypted: bytes) -> str:
-    """Decrypt AES-256-CBC encrypted CNIC."""
-    key = _get_aes_key()
+def encrypt_data(data: str, aad: Optional[str] = None) -> bytes:
+    """
+    AES-256-GCM encryption. 
+    Returns: b"gcm:" + version_len(1) + version + iv(12) + tag(16) + ciphertext
+    """
+    key, version = _get_aes_key_and_version()
+    iv = secrets.token_bytes(12)  # 12 bytes is standard for GCM
+    aesgcm = Cipher(
+        algorithms.AES(key),
+        modes.GCM(iv),
+        backend=default_backend()
+    ).encryptor()
+    
+    if aad:
+        aesgcm.authenticate_additional_data(aad.encode())
+        
+    ciphertext = aesgcm.update(data.encode()) + aesgcm.finalize()
+    tag = aesgcm.tag
+    
+    v_bytes = version.encode()
+    return b"gcm:" + struct.pack("B", len(v_bytes)) + v_bytes + iv + tag + ciphertext
+
+
+def decrypt_data(encrypted: bytes, aad: Optional[str] = None) -> str:
+    """
+    Decrypt data, supporting both legacy CBC and new GCM with lazy migration.
+    """
+    if not encrypted:
+        return ""
+
+    # Check for GCM prefix
+    if encrypted.startswith(b"gcm:"):
+        try:
+            v_len = struct.unpack("B", encrypted[4:5])[0]
+            version = encrypted[5:5+v_len].decode()
+            iv = encrypted[5+v_len : 5+v_len+12]
+            tag = encrypted[5+v_len+12 : 5+v_len+12+16]
+            ciphertext = encrypted[5+v_len+12+16:]
+            
+            rec = secrets_manager.get_aes_record_by_version(version)
+            if not rec:
+                raise ValueError(f"Unknown key version: {version}")
+                
+            key = rec.key.encode()[:32].ljust(32, b"\x00")
+            
+            cipher = Cipher(
+                algorithms.AES(key),
+                modes.GCM(iv, tag),
+                backend=default_backend()
+            )
+            decryptor = cipher.decryptor()
+            if aad:
+                decryptor.authenticate_additional_data(aad.encode())
+            
+            return (decryptor.update(ciphertext) + decryptor.finalize()).decode()
+        except Exception as e:
+            print(f"[Security] GCM Decryption failed: {e}")
+            raise
+
+    # Fallback to legacy CBC
     iv, ciphertext = encrypted[:16], encrypted[16:]
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
-    decryptor = cipher.decryptor()
-    padded = decryptor.update(ciphertext) + decryptor.finalize()
-    unpadder = padding.PKCS7(128).unpadder()
-    return (unpadder.update(padded) + unpadder.finalize()).decode()
+    for rec in secrets_manager.get_all_aes_records():
+        try:
+            key = rec.key.encode()[:32].ljust(32, b"\x00")
+            cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+            decryptor = cipher.decryptor()
+            padded = decryptor.update(ciphertext) + decryptor.finalize()
+            unpadder = padding.PKCS7(128).unpadder()
+            return (unpadder.update(padded) + unpadder.finalize()).decode()
+        except Exception:
+            continue
+            
+    raise ValueError("Failed to decrypt data with any available key.")
+
+
+# Keep old names for backward compatibility if needed, but point to new generic ones
+encrypt_cnic = encrypt_data
+decrypt_cnic = decrypt_data
 
 
 # ─── SDK API Key Middleware ────────────────────────────────────────────────────
@@ -128,16 +203,19 @@ def get_current_user(
     if user_id_str is None:
         raise HTTPException(status_code=401, detail="Invalid token payload")
 
+    jti = payload.get("jti")
+    if not jti:
+        raise HTTPException(status_code=401, detail="Invalid token payload: missing JTI")
+
     try:
         user_id = uuid.UUID(user_id_str)   # convert string back to UUID
     except ValueError:
         raise HTTPException(status_code=401, detail="Invalid token payload")
 
-    # Verify session is still active
+    # Verify session is still active (this acts as a strict token blacklist)
     session = (
         db.query(AuthSession)
-        .filter(AuthSession.user_id == user_id, AuthSession.is_active == True)
-        .order_by(AuthSession.created_at.desc())
+        .filter(AuthSession.jwt_jti == jti, AuthSession.is_active == True)
         .first()
     )
     if not session:

@@ -1,0 +1,30 @@
+name: Dependency Security Scan
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  pip-audit:
+    name: Audit Python Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Run pip-audit
+        # pip-audit scans the requirements.txt against the PyPA advisory database.
+        # It will exit with a non-zero status code if ANY vulnerabilities are found,
+        # thereby failing the GitHub Actions check and blocking the PR.
+        run: pip-audit -r requirements.txt --desc

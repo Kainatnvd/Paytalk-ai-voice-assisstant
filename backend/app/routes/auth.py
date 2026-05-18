@@ -11,6 +11,7 @@ from app.core.security import (
     encrypt_cnic,
     get_current_user,
     hash_cnic,
+    hash_phone_number,
     hash_password,
     normalize_cnic,
     verify_password,
@@ -24,6 +25,7 @@ from app.schemas.otp_schema import OtpSendRequest, OtpVerifyRequest, OtpResponse
 from app.schemas.user_schema import TokenResponse, UserLoginRequest, UserRegisterRequest, UserResponse, ForgotPasswordRequest
 from app.services import nfc_service, otp_service
 from app.models.contacts import Contact
+from app.core.rate_limit import limiter
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -31,7 +33,8 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 @router.post("/register", response_model=UserResponse, status_code=201)
 def register(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     """Register a new user under a partner. CNIC is hashed and AES-256 encrypted on save."""
-    if db.query(User).filter(User.phone_number == payload.phone_number).first():
+    phone_hash = hash_phone_number(payload.phone_number)
+    if db.query(User).filter(User.phone_number_hash == phone_hash).first():
         raise HTTPException(status_code=409, detail="Phone number already registered")
 
     # Normalize CNIC: strip dashes so "12345-6789012-3" → "1234567890123"
@@ -51,15 +54,18 @@ def register(payload: UserRegisterRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid partner_id")
 
     user = User(
-        full_name=payload.full_name or "Unknown User",
-        phone_number=payload.phone_number,
+        user_id=uuid.uuid4(),  # Explicitly set so AAD is valid during encryption
         email=payload.email,
         password_hash=hash_password(payload.password),
-        cnic_hash=cnic_hash,
-        cnic_encrypted=encrypt_cnic(cnic_normalized),
+        pin_hash=hash_password(payload.pin),
         partner_id=partner_id,
         preferred_language=payload.preferred_language or "ur",
     )
+    # Use standardized setter for PII and CNIC
+    user.full_name = payload.full_name or "Unknown User"
+    user.phone_number = payload.phone_number
+    user.set_cnic(cnic_normalized)
+    
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -81,9 +87,11 @@ def register(payload: UserRegisterRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: UserLoginRequest, request: Request, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get_db)):
     """Validate credentials, create JWT, and record auth session."""
-    user = db.query(User).filter(User.phone_number == payload.phone_number).first()
+    phone_hash = hash_phone_number(payload.phone_number)
+    user = db.query(User).filter(User.phone_number_hash == phone_hash).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
@@ -115,18 +123,28 @@ def login(payload: UserLoginRequest, request: Request, db: Session = Depends(get
 @router.post("/reset-password")
 def reset_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
     """Reset a user's password using their phone number and CNIC."""
-    user = db.query(User).filter(User.phone_number == payload.phone_number).first()
+    phone_hash = hash_phone_number(payload.phone_number)
+    user = db.query(User).filter(User.phone_number_hash == phone_hash).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     cnic_normalized = normalize_cnic(payload.cnic)
-    cnic_hash = hash_cnic(cnic_normalized)
+    
+    # Verify CNIC (Lazy Migration support)
+    current_hash = hash_cnic(cnic_normalized, salt=str(user.user_id))
+    legacy_hash = hash_cnic(cnic_normalized, salt="default_static_salt_for_migration")
+    raw_hash = hash_cnic(cnic_normalized, salt="") # old unsalted (empty salt)
 
-    if user.cnic_hash != cnic_hash:
+    if user.cnic_hash not in [current_hash, legacy_hash, raw_hash]:
         raise HTTPException(status_code=401, detail="Identity verification failed. Invalid CNIC.")
+
+    # Lazy Migration: Update to salted hash and GCM encryption if needed
+    if user.cnic_hash != current_hash:
+        user.set_cnic(cnic_normalized)
 
     user.password_hash = hash_password(payload.new_password)
     db.commit()
+
 
     return {"message": "Password reset successfully"}
 

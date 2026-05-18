@@ -19,6 +19,19 @@ def init_db():
     
     db = SessionLocal()
     try:
+        # Enforce write-once policy on audit_logs using Postgres Rules
+        from sqlalchemy import text
+        try:
+            db.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto;"))
+            db.execute(text("CREATE RULE prevent_audit_log_delete AS ON DELETE TO audit_logs DO INSTEAD NOTHING;"))
+            db.execute(text("CREATE RULE prevent_audit_log_update AS ON UPDATE TO audit_logs DO INSTEAD NOTHING;"))
+            db.commit()
+            print("Enabled pgcrypto and enforced immutable rules on audit_logs table.")
+        except Exception as rule_err:
+            db.rollback()
+            # Rules might already exist, so we ignore the error
+            print(f"(Note: immutable rules may already exist or DB isn't Postgres: {rule_err})")
+        
         # 1. Create Partner if not exists
         partner = db.query(app.models.Partner).first()
         if not partner:

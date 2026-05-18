@@ -1,0 +1,12 @@
+transformers>=4.26.0
+datasets[audio]>=2.9.0
+accelerate>=0.16.0
+evaluate>=0.4.0
+jiwer
+torch
+torchvision
+torchaudio
+librosa
+soundfile
+tensorboard
+protobuf
