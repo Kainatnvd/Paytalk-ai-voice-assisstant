@@ -2,11 +2,43 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/bento_card.dart';
-import '../services/mock_data.dart';
 import '../models/transaction.dart';
+import '../services/api_service.dart';
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
+
+  @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  final ApiService _apiService = ApiService();
+  String _balance = '...';
+  List<Transaction> _transactions = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    setState(() => _isLoading = true);
+    final balanceResult = await _apiService.getBalance();
+    final transactionsResult = await _apiService.getTransactions();
+
+    if (mounted) {
+      setState(() {
+        if (balanceResult.containsKey('balance')) {
+          _balance = '${balanceResult['currency']} ${balanceResult['balance']}';
+        }
+        _transactions = transactionsResult;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +46,6 @@ class HistoryScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Background Gradient Shade
           Positioned(
             top: 0,
             right: 0,
@@ -29,22 +60,28 @@ class HistoryScreen extends StatelessWidget {
           ),
           
           SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 48),
-                  _buildSectionTitle('Recent Activity'),
-                  const SizedBox(height: 24),
-                  _buildTransactionList(),
-                  const SizedBox(height: 48),
-                  _buildSectionTitle('Dashboard Bento'),
-                  const SizedBox(height: 24),
-                  _buildBentoGrid(context),
-                  const SizedBox(height: 120),
-                ],
+            child: RefreshIndicator(
+              onRefresh: _fetchData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(),
+                    const SizedBox(height: 48),
+                    _buildSectionTitle('Recent Activity'),
+                    const SizedBox(height: 24),
+                    _isLoading 
+                      ? const Center(child: CircularProgressIndicator())
+                      : _buildTransactionList(),
+                    const SizedBox(height: 48),
+                    _buildSectionTitle('Dashboard Bento'),
+                    const SizedBox(height: 24),
+                    _buildBentoGrid(context),
+                    const SizedBox(height: 120),
+                  ],
+                ),
               ),
             ),
           ),
@@ -65,7 +102,7 @@ class HistoryScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text('AVAILABLE BALANCE', style: AppTypography.labelSmall.copyWith(fontSize: 8, color: Colors.indigo.shade200)),
-                Text('\$24,500.00', style: AppTypography.headlineLarge.copyWith(color: AppColors.primary, fontSize: 22)),
+                Text(_balance, style: AppTypography.headlineLarge.copyWith(color: AppColors.primary, fontSize: 22)),
               ],
             ),
           ],
@@ -94,9 +131,11 @@ class HistoryScreen extends StatelessWidget {
   }
 
   Widget _buildTransactionList() {
-    final transactions = MockData.transactions;
+    if (_transactions.isEmpty) {
+      return const Center(child: Text('No transaction history found.'));
+    }
     return Column(
-      children: transactions.map((tx) => _buildTransactionItem(tx)).toList(),
+      children: _transactions.map((tx) => _buildTransactionItem(tx)).toList(),
     );
   }
 
@@ -116,7 +155,11 @@ class HistoryScreen extends StatelessWidget {
                 color: AppColors.primaryContainer,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(_getIcon(tx.icon), color: AppColors.primary, size: 24),
+              child: Icon(
+                isExpense ? Icons.call_made : Icons.call_received, 
+                color: AppColors.primary, 
+                size: 24
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -132,7 +175,7 @@ class HistoryScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${isExpense ? '-' : '+'}\$${tx.amount.toStringAsFixed(2)}',
+                  '${isExpense ? '-' : '+'}${tx.amount.toStringAsFixed(2)}',
                   style: AppTypography.headlineMedium.copyWith(
                     fontSize: 16,
                     color: isExpense ? AppColors.onSurface : AppColors.primary,
@@ -158,7 +201,6 @@ class HistoryScreen extends StatelessWidget {
   Widget _buildBentoGrid(BuildContext context) {
     return Column(
       children: [
-        // Monthly Trend
         BentoCard(
           padding: const EdgeInsets.all(32.0),
           child: Column(
@@ -248,10 +290,5 @@ class HistoryScreen extends StatelessWidget {
       ],
     );
   }
-
-  IconData _getIcon(String icon) {
-    if (icon == 'shopping_bag') return Icons.shopping_bag;
-    if (icon == 'call_received') return Icons.call_received;
-    return Icons.payment;
-  }
 }
+

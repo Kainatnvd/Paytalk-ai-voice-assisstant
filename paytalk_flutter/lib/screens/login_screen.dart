@@ -3,9 +3,60 @@ import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/mesh_gradient_background.dart';
 import '../widgets/glass_card.dart';
+import '../services/api_service.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final ApiService _apiService = ApiService();
+  bool _isLoading = false;
+
+  Future<void> _handleLogin() async {
+    if (_phoneController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all fields')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final result = await _apiService.login(
+      _phoneController.text.trim(),
+      _passwordController.text.trim(),
+    );
+
+    setState(() => _isLoading = false);
+
+    if (result['status'] == 'success') {
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      }
+    } else {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Access Denied'),
+            content: Text(result['message'] ?? 'Invalid credentials'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +64,6 @@ class LoginScreen extends StatelessWidget {
       body: AnimatedGradientBlob(
         child: Stack(
           children: [
-            // Top Logo Section
             Positioned(
               top: 80,
               left: 0,
@@ -56,20 +106,17 @@ class LoginScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 32),
                         
-                        // Phone Number
                         Text('Phone number', style: AppTypography.labelSmall),
                         const SizedBox(height: 8),
                         TextField(
+                          controller: _phoneController,
+                          keyboardType: TextInputType.phone,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.phone_iphone, color: AppColors.primary),
-                            hintText: '+1 (555) 000-0000',
+                            hintText: '03001234567',
                             filled: true,
                             fillColor: Colors.white,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide(color: AppColors.primary.withOpacity(0.1)),
-                            ),
-                            enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
                               borderSide: BorderSide(color: AppColors.primary.withOpacity(0.1)),
                             ),
@@ -77,7 +124,6 @@ class LoginScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 24),
                         
-                        // Password
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -89,10 +135,10 @@ class LoginScreen extends StatelessWidget {
                           ],
                         ),
                         TextField(
+                          controller: _passwordController,
                           obscureText: true,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.lock, color: AppColors.primary),
-                            suffixIcon: const Icon(Icons.visibility_off, color: AppColors.primary),
                             hintText: '••••••••••••',
                             filled: true,
                             fillColor: Colors.white,
@@ -100,15 +146,10 @@ class LoginScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(16),
                               borderSide: BorderSide(color: AppColors.primary.withOpacity(0.1)),
                             ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide(color: AppColors.primary.withOpacity(0.1)),
-                            ),
                           ),
                         ),
                         const SizedBox(height: 32),
                         
-                        // Login Button
                         Container(
                           width: double.infinity,
                           height: 64,
@@ -124,22 +165,22 @@ class LoginScreen extends StatelessWidget {
                             ],
                           ),
                           child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.pushReplacementNamed(context, '/dashboard');
-                            },
+                            onPressed: _isLoading ? null : _handleLogin,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text('Access Vault', style: AppTypography.headlineMedium.copyWith(color: Colors.white)),
-                                const SizedBox(width: 8),
-                                const Icon(Icons.arrow_forward, color: Colors.white),
-                              ],
-                            ),
+                            child: _isLoading 
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text('Access Vault', style: AppTypography.headlineMedium.copyWith(color: Colors.white)),
+                                    const SizedBox(width: 8),
+                                    const Icon(Icons.arrow_forward, color: Colors.white),
+                                  ],
+                                ),
                           ),
                         ),
                       ],
@@ -149,7 +190,6 @@ class LoginScreen extends StatelessWidget {
               ),
             ),
             
-            // Footer
             const Positioned(
               bottom: 40,
               left: 0,
@@ -172,3 +212,4 @@ class LoginScreen extends StatelessWidget {
     );
   }
 }
+

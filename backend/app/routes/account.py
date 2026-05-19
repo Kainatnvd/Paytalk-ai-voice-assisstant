@@ -18,13 +18,22 @@ def get_balance(current_user=Depends(get_current_user), db: Session = Depends(ge
     """
     Fetch account balance.
     In production this calls the partner bank's core banking API.
-    For FYP demo, returns a mocked balance.
+    For FYP demo, calculates balance from transaction history.
     """
-    # TODO: Replace with real bank API call via partner integration
-    mock_balance = "25,000.00"
+    # Start with a demo baseline of 50,000 PKR
+    baseline = 50000.00
+    
+    # Sum all transactions for this user
+    total_spent = db.query(func.sum(Transaction.amount)).filter(
+        Transaction.sender_id == current_user.user_id,
+        Transaction.status == "completed"
+    ).scalar() or 0.0
+    
+    current_balance = float(baseline) - float(total_spent)
+    
     return {
         "account_number": current_user.account_number or "0000-0000000-0",
-        "balance": mock_balance,
+        "balance": f"{current_balance:,.2f}",
         "currency": "PKR",
         "owner": current_user.full_name,
     }
