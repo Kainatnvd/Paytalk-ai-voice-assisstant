@@ -124,10 +124,26 @@ def classify_intent(text: str) -> Dict[str, Any]:
             }}
             """
             
-            response = client.models.generate_content(
-                model='gemini-2.0-flash',
-                contents=prompt,
-            )
+            # Multi-model fallback chain to handle free-tier rate limits and quotas
+            models_to_try = ['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-2.5-flash']
+            response = None
+            last_err = None
+            
+            for model_name in models_to_try:
+                try:
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                    )
+                    break
+                except Exception as e:
+                    last_err = e
+                    print(f"[NLU] Model {model_name} failed: {e}. Trying next fallback...")
+                    continue
+            
+            if response is None:
+                raise last_err or Exception("All Gemini models failed")
+                
             resp_text = response.text.strip()
             
             # Clean up markdown

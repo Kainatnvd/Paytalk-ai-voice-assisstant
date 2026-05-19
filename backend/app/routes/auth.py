@@ -22,7 +22,7 @@ from app.models.user import User
 from app.models.partner import Partner
 from app.schemas.misc_schema import NfcMockRequest, NfcVerifyRequest, NfcVerifyResponse
 from app.schemas.otp_schema import OtpSendRequest, OtpVerifyRequest, OtpResponse
-from app.schemas.user_schema import TokenResponse, UserLoginRequest, UserRegisterRequest, UserResponse, ForgotPasswordRequest
+from app.schemas.user_schema import TokenResponse, UserLoginRequest, UserRegisterRequest, UserResponse, ForgotPasswordRequest, ForgotPinRequest
 from app.services import nfc_service, otp_service
 from app.models.contacts import Contact
 from app.core.rate_limit import limiter
@@ -147,6 +147,34 @@ def reset_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)
 
 
     return {"message": "Password reset successfully"}
+
+
+@router.post("/reset-pin")
+def reset_pin(payload: ForgotPinRequest, db: Session = Depends(get_db)):
+    """Reset a user's transaction PIN using their phone number and CNIC."""
+    phone_hash = hash_phone_number(payload.phone_number)
+    user = db.query(User).filter(User.phone_number_hash == phone_hash).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    cnic_normalized = normalize_cnic(payload.cnic)
+    
+    # Verify CNIC (Lazy Migration support)
+    current_hash = hash_cnic(cnic_normalized, salt=str(user.user_id))
+    legacy_hash = hash_cnic(cnic_normalized, salt="default_static_salt_for_migration")
+    raw_hash = hash_cnic(cnic_normalized, salt="") # old unsalted (empty salt)
+
+    if user.cnic_hash not in [current_hash, legacy_hash, raw_hash]:
+        raise HTTPException(status_code=401, detail="Identity verification failed. Invalid CNIC.")
+
+    # Lazy Migration: Update to salted hash and GCM encryption if needed
+    if user.cnic_hash != current_hash:
+        user.set_cnic(cnic_normalized)
+
+    user.pin_hash = hash_password(payload.new_pin)
+    db.commit()
+
+    return {"message": "PIN reset successfully"}
 
 
 @router.post("/otp/send", response_model=OtpResponse)

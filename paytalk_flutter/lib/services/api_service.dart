@@ -133,6 +133,34 @@ class ApiService extends ChangeNotifier {
     }
   }
 
+  /// POST /auth/reset-pin
+  Future<Map<String, dynamic>> resetPin(String phone, String cnic, String newPin) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/reset-pin'),
+        body: json.encode({
+          'phone_number': phone,
+          'cnic': cnic,
+          'new_pin': newPin,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'status': 'success', 'message': data['message']};
+      } else {
+        return {
+          'status': 'error',
+          'message': _parseError(data['detail']) ?? 'PIN reset failed'
+        };
+      }
+    } catch (e) {
+      return {'status': 'error', 'message': 'Connection error: $e'};
+    }
+  }
+
   /// POST /auth/logout
   Future<void> logout() async {
     try {

@@ -103,14 +103,19 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (_isProcessingRecording) return;
 
     if (_isRecording) {
-      setState(() => _isProcessingRecording = true);
+      // 1. Immediately trigger visual feedback: stop listening, start processing
+      setState(() {
+        _isRecording = false;
+        _isProcessingRecording = true;
+      });
 
-      // Brief delay to capture trailing audio (prevents last word being clipped)
+      // 2. Brief delay in background to capture trailing audio (prevents last word being clipped)
       await Future.delayed(const Duration(milliseconds: 500));
 
+      // 3. Stop recording in background
       final path = await _audioRecorder.stop();
-      setState(() => _isRecording = false);
 
+      // 4. Process voice
       if (path != null) {
         await _processVoice(path);
       }

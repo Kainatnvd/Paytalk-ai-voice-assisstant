@@ -56,14 +56,30 @@ def transcribe_audio(audio_bytes: bytes, language_hint: str = "ur") -> dict:
             else:
                 client = genai.Client(api_key=settings.GOOGLE_API_KEY)
                 
-                # Gemini can process audio directly
-                response = client.models.generate_content(
-                    model='gemini-2.0-flash',
-                    contents=[
-                        types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav"),
-                        "Transcribe this audio exactly. If the user speaks English, transcribe it in English. If they speak Urdu, transcribe it in Urdu. Do NOT translate. Do NOT include any timestamps like 00:01. Return ONLY the transcribed text."
-                    ]
-                )
+                # Robust multi-model fallback chain for cloud audio processing
+                models_to_try = ['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-2.5-flash']
+                response = None
+                last_err = None
+                
+                audio_contents = [
+                    types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav"),
+                    "Transcribe this audio exactly. If the user speaks English, transcribe it in English. If they speak Urdu, transcribe it in Urdu. Do NOT translate. Do NOT include any timestamps like 00:01. Return ONLY the transcribed text."
+                ]
+                
+                for model_name in models_to_try:
+                    try:
+                        response = client.models.generate_content(
+                            model=model_name,
+                            contents=audio_contents
+                        )
+                        break
+                    except Exception as e:
+                        last_err = e
+                        print(f"[STT] Cloud Model {model_name} failed: {e}. Trying next fallback...")
+                        continue
+                
+                if response is None:
+                    raise last_err or Exception("All Gemini STT models failed")
                 
                 text = response.text.strip()
                 elapsed_ms = int((time.perf_counter() - start) * 1000)

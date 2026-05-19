@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/login_screen.dart';
 import 'screens/forgot_password_screen.dart';
+import 'screens/forgot_pin_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/transaction_otp_screen.dart';
 import 'screens/history_screen.dart';
@@ -44,6 +45,7 @@ class PayTalkApp extends StatelessWidget {
       routes: {
         '/': (context) => const LoginScreen(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
+        '/forgot-pin': (context) => const ForgotPinScreen(),
         '/dashboard': (context) => const NavigationShell(),
         '/security': (context) => const SecurityScreen(),
         '/security-settings': (context) => const SecuritySettingsScreen(),

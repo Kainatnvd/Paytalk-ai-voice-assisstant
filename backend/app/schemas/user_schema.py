@@ -78,6 +78,19 @@ class ForgotPasswordRequest(BaseModel):
         return v
 
 
+class ForgotPinRequest(BaseModel):
+    phone_number: str
+    cnic: str
+    new_pin: str
+
+    @field_validator("new_pin")
+    @classmethod
+    def validate_pin(cls, v: str) -> str:
+        if not re.fullmatch(r"\d{4}", v):
+            raise ValueError("PIN must be exactly 4 digits")
+        return v
+
+
 class UserResponse(BaseModel):
     user_id: UUID
     full_name: str

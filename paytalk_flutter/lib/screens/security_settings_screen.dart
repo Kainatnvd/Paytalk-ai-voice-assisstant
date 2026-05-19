@@ -40,6 +40,15 @@ class SecuritySettingsScreen extends StatelessWidget {
               'Recover your account if you have lost your credentials.',
               () => Navigator.pushNamed(context, '/forgot-password'),
             ),
+            const SizedBox(height: 16),
+
+            _buildSecurityOption(
+              context,
+              Icons.lock_reset,
+              'Forgot PIN',
+              'Recover your transaction PIN with your phone and CNIC.',
+              () => Navigator.pushNamed(context, '/forgot-pin'),
+            ),
             const SizedBox(height: 32),
 
             BentoCard(

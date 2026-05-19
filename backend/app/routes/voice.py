@@ -31,6 +31,95 @@ from app.services import (
     transcription as transcription_service,
 )
 
+def levenshtein_similarity(s1: str, s2: str) -> float:
+    """Computes Levenshtein similarity between two strings."""
+    if len(s1) < len(s2):
+        s1, s2 = s2, s1
+    if len(s2) == 0:
+        return 1.0 if len(s1) == 0 else 0.0
+    
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+        
+    distance = previous_row[-1]
+    max_len = max(len(s1), len(s2))
+    return 1.0 - (distance / max_len)
+
+
+def match_account_type(text: str) -> str:
+    """
+    Fuzzy matches the user's transcription to one of the bank account types:
+    Easypaisa, Jazzcash, Nayapay, Sadapay, or Bank Transfer.
+    Returns 'multiple' if more than one matches (asking user to clarify),
+    'unknown' if none matches, or the matching canonical string.
+    """
+    import re
+    text_clean = re.sub(r'[^\w\s]', '', text.lower()).strip()
+    
+    # Define keywords/variations for token matching and simple similarity
+    categories = {
+        "Bank Transfer": ["bank", "transfer", "account", "بینک"],
+        "Easypaisa": ["easypaisa", "easy paisa", "easy pesa", "easy paysa", "easy", "paisa", "pesa", "paysa", "ایزی پیسہ"],
+        "Jazzcash": ["jazzcash", "jazz cash", "jazcash", "jazz", "cash", "جاز کیش"],
+        "Nayapay": ["nayapay", "naya pay", "naya", "نیا پے"],
+        "Sadapay": ["sadapay", "sada pay", "sada", "سادہ پے"]
+    }
+    
+    # Exact phrase matches take high priority
+    exact_phrases = {
+        "Bank Transfer": ["bank transfer", "bank account", "bank", "transfer"],
+        "Easypaisa": ["easypaisa", "easy paisa", "easy pesa", "easy paysa", "easy, pesa", "easy, paisa", "easypesa", "easypaysa"],
+        "Jazzcash": ["jazzcash", "jazz cash", "jazcash"],
+        "Nayapay": ["nayapay", "naya pay"],
+        "Sadapay": ["sadapay", "sada pay"]
+    }
+    
+    matched_exact = []
+    for cat, phrases in exact_phrases.items():
+        for phrase in phrases:
+            if phrase in text_clean or phrase in text.lower():
+                matched_exact.append(cat)
+                break
+                
+    unique_exact = list(set(matched_exact))
+    if len(unique_exact) == 1:
+        return unique_exact[0]
+    elif len(unique_exact) > 1:
+        return "multiple"
+        
+    # Keyword & Fuzzy token fallback
+    matched_cats = []
+    tokens = text_clean.split()
+    for cat, kw_list in categories.items():
+        for kw in kw_list:
+            if kw in text_clean:
+                matched_cats.append(cat)
+                break
+            
+            # Fuzzy match word tokens
+            for token in tokens:
+                if len(token) >= 4 and len(kw) >= 4:
+                    sim = levenshtein_similarity(token, kw)
+                    if sim >= 0.8:
+                        matched_cats.append(cat)
+                        break
+                        
+    unique_cats = list(set(matched_cats))
+    if len(unique_cats) == 1:
+        return unique_cats[0]
+    elif len(unique_cats) > 1:
+        return "multiple"
+        
+    return "unknown"
+
+
 router = APIRouter(prefix="/voice", tags=["Voice AI"])
 
 @router.get("/nonce")
@@ -232,42 +321,60 @@ async def _handle_voice_logic(
         if any(kw in text_lower for kw in raast_keywords):
             dialogue_service.set_state(db, session_id, "AWAITING_RAAST_ID", pending)
             response_text = "براہ کرم راست (Raast) اکاؤنٹ نمبر درج کریں۔" if detected_lang == "ur" else "Please enter the Raast account number."
-        elif "account" in text_lower or "اکاؤنٹ" in text_lower or "number" in text_lower:
-            dialogue_service.set_state(db, session_id, "AWAITING_ACCOUNT_TYPE", pending)
-            response_text = "براہ کرم اکاؤنٹ کی قسم بتائیں: ایزی پیسہ، جاز کیش، نیا پے، سادہ پے یا بینک ٹرانسفر۔" if detected_lang == "ur" else "Please specify the account type: Easypaisa, Jazzcash, Nayapay, Sadapay, or Bank Transfer."
         else:
-            response_text = "براہ کرم بتائیں: اکاؤنٹ نمبر یا راست؟" if detected_lang == "ur" else "Please specify: Account Number or Raast?"
+            # Check if they directly mentioned a wallet or bank type (even multiple)
+            matched_type = match_account_type(transcription)
+            if matched_type == "multiple":
+                dialogue_service.set_state(db, session_id, "AWAITING_ACCOUNT_TYPE", pending)
+                response_text = "براہ کرم اکاؤنٹ کی قسم بتائیں: ایزی پیسہ، جاز کیش، نیا پے، سادہ پے یا بینک ٹرانسفر۔" if detected_lang == "ur" else "Please specify the account type: Easypaisa, Jazzcash, Nayapay, Sadapay, or Bank Transfer."
+            elif matched_type in ["Bank Transfer", "Easypaisa", "Jazzcash", "Nayapay", "Sadapay"]:
+                if matched_type == "Bank Transfer":
+                    pending["account_type"] = "Bank Transfer"
+                    dialogue_service.set_state(db, session_id, "AWAITING_BANK_NAME", pending)
+                    response_text = "براہ کرم بینک کا نام بتائیں، جیسے بینک الفلاح، میزان بینک، یا یو بی ایل۔" if detected_lang == "ur" else "Please speak the bank name, such as Bank Alfalah, Meezan Bank, or UBL."
+                else:
+                    pending["account_type"] = matched_type
+                    dialogue_service.set_state(db, session_id, "AWAITING_ACCOUNT_NUMBER", pending)
+                    response_text = f"براہ کرم {matched_type} اکاؤنٹ نمبر درج کریں۔" if detected_lang == "ur" else f"Please enter the {matched_type} account number."
+            elif "account" in text_lower or "اکاؤنٹ" in text_lower or "number" in text_lower:
+                dialogue_service.set_state(db, session_id, "AWAITING_ACCOUNT_TYPE", pending)
+                response_text = "براہ کرم اکاؤنٹ کی قسم بتائیں: ایزی پیسہ، جاز کیش، نیا پے، سادہ پے یا بینک ٹرانسفر۔" if detected_lang == "ur" else "Please specify the account type: Easypaisa, Jazzcash, Nayapay, Sadapay, or Bank Transfer."
+            else:
+                response_text = "براہ کرم بتائیں: اکاؤنٹ نمبر یا راست؟" if detected_lang == "ur" else "Please specify: Account Number or Raast?"
 
     elif state == "AWAITING_ACCOUNT_TYPE":
         pending = dialogue["pending_action"] or {}
-        text_lower = transcription.lower()
-        if any(kw in text_lower for kw in ["bank", "بینک"]):
+        matched_type = match_account_type(transcription)
+        
+        if matched_type == "Bank Transfer":
             pending["account_type"] = "Bank Transfer"
             dialogue_service.set_state(db, session_id, "AWAITING_BANK_NAME", pending)
             response_text = "براہ کرم بینک کا نام بتائیں، جیسے بینک الفلاح، میزان بینک، یا یو بی ایل۔" if detected_lang == "ur" else "Please speak the bank name, such as Bank Alfalah, Meezan Bank, or UBL."
-        elif any(kw in text_lower for kw in ["easypaisa", "easy paisa", "ایزی پیسہ"]):
+        elif matched_type == "Easypaisa":
             pending["account_type"] = "Easypaisa"
             dialogue_service.set_state(db, session_id, "AWAITING_ACCOUNT_NUMBER", pending)
             response_text = "براہ کرم ایزی پیسہ اکاؤنٹ نمبر درج کریں۔" if detected_lang == "ur" else "Please enter the Easypaisa account number."
-        elif any(kw in text_lower for kw in ["jazzcash", "jazz cash", "جاز کیش"]):
+        elif matched_type == "Jazzcash":
             pending["account_type"] = "Jazzcash"
             dialogue_service.set_state(db, session_id, "AWAITING_ACCOUNT_NUMBER", pending)
             response_text = "براہ کرم جاز کیش اکاؤنٹ نمبر درج کریں۔" if detected_lang == "ur" else "Please enter the Jazzcash account number."
-        elif any(kw in text_lower for kw in ["nayapay", "naya pay", "نیا پے"]):
+        elif matched_type == "Nayapay":
             pending["account_type"] = "Nayapay"
             dialogue_service.set_state(db, session_id, "AWAITING_ACCOUNT_NUMBER", pending)
             response_text = "براہ کرم نیا پے اکاؤنٹ نمبر درج کریں۔" if detected_lang == "ur" else "Please enter the Nayapay account number."
-        elif any(kw in text_lower for kw in ["sadapay", "sada pay", "سادہ پے"]):
+        elif matched_type == "Sadapay":
             pending["account_type"] = "Sadapay"
             dialogue_service.set_state(db, session_id, "AWAITING_ACCOUNT_NUMBER", pending)
             response_text = "براہ کرم سادہ پے اکاؤنٹ نمبر درج کریں۔" if detected_lang == "ur" else "Please enter the Sadapay account number."
+        elif matched_type == "multiple":
+            response_text = "معذرت، آپ نے ایک سے زیادہ آپشنز بتائے ہیں۔ براہ کرم کسی ایک کا انتخاب کریں: ایزی پیسہ، جاز کیش، نیا پے، سادہ پے یا بینک؟" if detected_lang == "ur" else "You mentioned multiple options. Please specify only one: Easypaisa, Jazzcash, Nayapay, Sadapay, or Bank?"
         else:
             response_text = "معذرت، میں سمجھ نہیں سکا۔ براہ کرم بتائیں: ایزی پیسہ، جاز کیش، نیا پے، سادہ پے یا بینک؟" if detected_lang == "ur" else "Sorry, I didn't catch that. Please specify: Easypaisa, Jazzcash, Nayapay, Sadapay, or Bank?"
 
     elif state == "AWAITING_BANK_NAME":
         pending = dialogue["pending_action"] or {}
         text_lower = transcription.lower()
-        if any(kw in text_lower for kw in ["alfalah", "الفلاح"]):
+        if any(kw in text_lower for kw in ["alfalah", "alpha", "al falah", "al-falah", "الفلاح"]):
             pending["bank_name"] = "Bank Alfalah"
         elif any(kw in text_lower for kw in ["meezan", "میزان"]):
             pending["bank_name"] = "Meezan Bank"
@@ -288,25 +395,26 @@ async def _handle_voice_logic(
         account_type = pending.get("account_type", "Account")
         bank_name = pending.get("bank_name", "")
         
+        # Support both mock account numbers and mock IBANs
         mock_accounts = {
-            "Easypaisa": "03451234567",
-            "Jazzcash": "03001234567",
-            "Nayapay": "03331234567",
-            "Sadapay": "03111234567",
-            "Bank Alfalah": "100200300400" # Simplified for testing, or could be PK12ALFA...
+            "Easypaisa": ["03451234567"],
+            "Jazzcash": ["03001234567"],
+            "Nayapay": ["03331234567"],
+            "Sadapay": ["03111234567"],
+            "Bank Alfalah": ["100200300400", "PK12ALFH100200300400"]
         }
         
-        # Determine the expected mock based on selection
-        expected_mock = mock_accounts.get(bank_name if account_type == "Bank Transfer" else account_type, "123456789")
+        # Determine the expected mocks based on selection
+        expected_mocks = mock_accounts.get(bank_name if account_type == "Bank Transfer" else account_type, ["123456789"])
         
-        if entered_account == expected_mock:
+        if entered_account in expected_mocks:
             pending["recipient_account"] = entered_account
             pending["is_raast"] = False
             dialogue_service.set_state(db, session_id, "AWAITING_PIN", pending)
             response_text = "Write your 4 digit pin." if detected_lang == "en" else "اپنا 4 ہندسوں کا پن لکھیں۔"
         else:
             display_name = bank_name if account_type == "Bank Transfer" else account_type
-            response_text = f"The {display_name} number must match the mock number: {expected_mock}." if detected_lang == "en" else f"براہ کرم {display_name} کا درست نمبر درج کریں: {expected_mock}۔"
+            response_text = f"Incorrect {display_name} account number. Please enter the correct account number or IBAN." if detected_lang == "en" else f"غلط {display_name} اکاؤنٹ نمبر۔ براہ کرم درست اکاؤنٹ نمبر یا IBAN درج کریں۔"
 
     elif state == "AWAITING_RAAST_ID":
         import re
