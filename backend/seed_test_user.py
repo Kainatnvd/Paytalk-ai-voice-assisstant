@@ -35,9 +35,12 @@ def create_test_user():
             user = User(
                 user_id=u_id,
                 partner_id=partner.partner_id,
-                email="faraz@example.com",
+                phone_number=phone,
+                full_name="Faraz Hashmi",
                 password_hash=hash_password("password123"),
                 account_number="PK12PAYT00000001",
+                cnic_hash=hash_cnic("4210112345678"),
+                cnic_encrypted=encrypt_cnic("4210112345678"),
                 is_active=True,
                 preferred_language="en",
                 voice_consent_given=True
@@ -47,14 +50,7 @@ def create_test_user():
             user.phone_number = phone
             user.set_cnic("4210112345678")
             
-            db.add(user)
-
-            db.commit()
-            print(f"Successfully created test user!")
-
-        # 4. Add some transaction history
         print("Seeding transaction history...")
-        
         # Check if already seeded
         existing_tx = db.query(Transaction).filter(Transaction.sender_id == u_id).first()
         if existing_tx:
@@ -96,25 +92,7 @@ def create_test_user():
                 status=TransactionStatus.completed,
                 initiated_via="api"
             )
-            tx5 = Transaction(
-                sender_id=u_id,
-                recipient_account="PK12WTRB11223344",
-                recipient_name="Water Bill",
-                amount=Decimal("1200.00"),
-                currency="PKR",
-                status=TransactionStatus.completed,
-                initiated_via="voice"
-            )
-            tx6 = Transaction(
-                sender_id=u_id,
-                recipient_account="PK12GASB55667788",
-                recipient_name="Gas Bill",
-                amount=Decimal("3500.00"),
-                currency="PKR",
-                status=TransactionStatus.completed,
-                initiated_via="voice"
-            )
-            db.add_all([tx1, tx2, tx3, tx4, tx5, tx6])
+            db.add_all([tx1, tx2, tx3, tx4])
             db.commit()
             print(f"Successfully seeded transactions!")
         print(f"User ID: {u_id}")

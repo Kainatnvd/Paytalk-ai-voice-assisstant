@@ -5,8 +5,6 @@ import '../widgets/mesh_gradient_background.dart';
 import '../widgets/glass_card.dart';
 import '../services/api_service.dart';
 
-/// Login Screen — exact replication of login_purplish_blue_theme wireframe.
-/// Glass card on animated gradient background with phone + password fields.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -17,111 +15,59 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _cnicController = TextEditingController();
-  final TextEditingController _pinController = TextEditingController();
   final ApiService _apiService = ApiService();
   bool _isLoading = false;
-  bool _obscurePassword = true;
-  bool _isRegistering = false;
-
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    _passwordController.dispose();
-    _nameController.dispose();
-    _cnicController.dispose();
-    _pinController.dispose();
-    super.dispose();
-  }
 
   Future<void> _handleLogin() async {
     if (_phoneController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please fill in all fields'),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+        const SnackBar(content: Text('Please fill in all fields')),
       );
       return;
     }
 
     setState(() => _isLoading = true);
 
-    Map<String, dynamic> result;
-    if (_isRegistering) {
-      if (_nameController.text.isEmpty || _cnicController.text.isEmpty || _pinController.text.isEmpty) {
-        setState(() => _isLoading = false);
-        return;
-      }
-      result = await _apiService.register(
-        _nameController.text.trim(),
-        _phoneController.text.trim(),
-        _cnicController.text.trim(),
-        _passwordController.text.trim(),
-        _pinController.text.trim(),
-      );
-    } else {
-      result = await _apiService.login(
-        _phoneController.text.trim(),
-        _passwordController.text.trim(),
-      );
-    }
+    final result = await _apiService.login(
+      _phoneController.text.trim(),
+      _passwordController.text.trim(),
+    );
 
     setState(() => _isLoading = false);
 
-    if (!mounted) return;
-
     if (result['status'] == 'success') {
-      Navigator.pushReplacementNamed(context, '/dashboard');
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      }
     } else {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Text('Access Denied',
-              style: AppTypography.headlineMedium
-                  .copyWith(color: AppColors.primary)),
-          content: Text(result['message'] ?? 'Invalid credentials',
-              style: AppTypography.bodyMedium),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Retry',
-                  style: AppTypography.labelLarge
-                      .copyWith(color: AppColors.primary)),
-            ),
-          ],
-        ),
-      );
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Access Denied'),
+            content: Text(result['message'] ?? 'Invalid credentials'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFd4ceff), // lightest lavender
-              Color(0xFFa899f5), // soft purple
-              Color(0xFF7b70e0), // medium purple
-              Color(0xFF7b6fbf), // deep muted purple
-            ],
-            stops: [0.0, 0.35, 0.7, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+      body: AnimatedGradientBlob(
+        child: Stack(
+          children: [
+            Positioned(
+              top: 80,
+              left: 0,
+              right: 0,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -141,7 +87,136 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
             ),
-          ),
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Hero(
+                  tag: 'login_card',
+                  child: GlassCard(
+                    padding: const EdgeInsets.all(32.0),
+                    borderRadius: 40.0,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Secure Login',
+                            style: AppTypography.displayLarge
+                                .copyWith(fontSize: 40)),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Enter your credentials to access your secure conduit.',
+                          style: AppTypography.bodyMedium,
+                        ),
+                        const SizedBox(height: 32),
+                        Text('Phone number', style: AppTypography.labelSmall),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _phoneController,
+                          keyboardType: TextInputType.phone,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.phone_iphone,
+                                color: AppColors.primary),
+                            hintText: '03001234567',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                  color: AppColors.primary.withOpacity(0.1)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Password', style: AppTypography.labelSmall),
+                            TextButton(
+                              onPressed: () {},
+                              child: Text('Forgot Password?',
+                                  style: AppTypography.labelSmall
+                                      .copyWith(color: AppColors.primary)),
+                            ),
+                          ],
+                        ),
+                        TextField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.lock,
+                                color: AppColors.primary),
+                            hintText: '••••••••••••',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(
+                                  color: AppColors.primary.withOpacity(0.1)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        Container(
+                          width: double.infinity,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            gradient: AppColors.primaryGradient,
+                            borderRadius: BorderRadius.circular(32),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withOpacity(0.3),
+                                blurRadius: 24,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _handleLogin,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(32)),
+                            ),
+                            child: _isLoading
+                                ? const CircularProgressIndicator(
+                                    color: Colors.white)
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text('Access Vault',
+                                          style: AppTypography.headlineMedium
+                                              .copyWith(color: Colors.white)),
+                                      const SizedBox(width: 8),
+                                      const Icon(Icons.arrow_forward,
+                                          color: Colors.white),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const Positioned(
+              bottom: 40,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Text(
+                  '© 2024 PAYTALK INTELLIGENCE SYSTEMS',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFC0C7DC),
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -209,7 +284,8 @@ class _LoginScreenState extends State<LoginScreen> {
             Text('4-Digit PIN',
                 style: AppTypography.labelLarge.copyWith(fontSize: 14)),
             const SizedBox(height: 8),
-            _buildTextField(_pinController, Icons.pin, '1234', TextInputType.number),
+            _buildTextField(
+                _pinController, Icons.pin, '1234', TextInputType.number),
             const SizedBox(height: 24),
           ],
 

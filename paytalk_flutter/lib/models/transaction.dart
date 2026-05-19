@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 enum TransactionType { expense, income }
 
 class Transaction {
@@ -25,33 +27,17 @@ class Transaction {
 
   factory Transaction.fromJson(
       Map<String, dynamic> json, String currentUserId) {
+    // Basic logic to determine if it's income or expense based on sender_id
     bool isExpense = json['sender_id'] == currentUserId;
-
-    // Parse date nicely
-    String dateStr = json['created_at'].toString();
-    String formattedDate = dateStr;
-    try {
-      final dt = DateTime.parse(dateStr);
-      final months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-      ];
-      final hour = dt.hour > 12 ? dt.hour - 12 : dt.hour;
-      final ampm = dt.hour >= 12 ? 'PM' : 'AM';
-      formattedDate =
-          '${months[dt.month - 1]} ${dt.day}, ${dt.year} • ${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} $ampm';
-    } catch (_) {}
 
     return Transaction(
       id: json['id'].toString(),
       title: json['recipient_name'] ?? 'Transfer',
-      date: formattedDate,
+      date: json['created_at'].toString().split('T')[0], // Simplified date
       amount: double.parse(json['amount'].toString()),
-      status: (json['status'] ?? 'pending').toString().toUpperCase(),
+      status: json['status'].toString().toUpperCase(),
       type: isExpense ? TransactionType.expense : TransactionType.income,
-      recipientAccount: json['recipient_account'],
-      raastReferenceId: json['raast_reference_id'],
-      failureReason: json['failure_reason'],
+      icon: isExpense ? 'call_made' : 'call_received',
     );
   }
 }
