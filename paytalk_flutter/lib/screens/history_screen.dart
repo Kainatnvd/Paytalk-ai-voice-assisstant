@@ -45,7 +45,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _fetchData() async {
     if (_isFetching) return;
-    
+
     setState(() {
       _isFetching = true;
       _isLoading = true;
@@ -71,7 +71,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -151,8 +150,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.8),
-        border: Border(
-            bottom: BorderSide(color: AppColors.outlineVariant)),
+        border: Border(bottom: BorderSide(color: AppColors.outlineVariant)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -163,8 +161,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Account History',
-                    style: AppTypography.displayMedium
-                        .copyWith(fontSize: 24)),
+                    style: AppTypography.displayMedium.copyWith(fontSize: 24)),
                 const SizedBox(height: 4),
                 Text('Review your recent conduits and ledgers.',
                     style: AppTypography.bodyMedium
@@ -199,8 +196,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.primaryContainer,
-              border: Border.all(
-                  color: AppColors.primary.withOpacity(0.1)),
+              border: Border.all(color: AppColors.primary.withOpacity(0.1)),
             ),
             child: const Icon(Icons.notifications,
                 color: AppColors.primary, size: 22),
@@ -227,8 +223,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
             const SizedBox(width: 12),
             Text(title,
-                style: AppTypography.headlineMedium
-                    .copyWith(fontSize: 20)),
+                style: AppTypography.headlineMedium.copyWith(fontSize: 20)),
           ],
         ),
         if (title == 'Recent Activity')
@@ -289,8 +284,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               decoration: BoxDecoration(
                 color: AppColors.primaryContainer,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                    color: AppColors.primary.withOpacity(0.1)),
+                border: Border.all(color: AppColors.primary.withOpacity(0.1)),
               ),
               child: Icon(
                 isExpense ? Icons.shopping_bag : Icons.call_received,
@@ -305,8 +299,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(tx.title,
-                      style: AppTypography.headlineSmall
-                          .copyWith(fontSize: 16)),
+                      style:
+                          AppTypography.headlineSmall.copyWith(fontSize: 16)),
                   const SizedBox(height: 4),
                   Text(
                     tx.date,
@@ -326,9 +320,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   '${isExpense ? "-" : "+"}${tx.amount.toStringAsFixed(2)}',
                   style: AppTypography.headlineSmall.copyWith(
                     fontSize: 16,
-                    color: isExpense
-                        ? AppColors.onSurface
-                        : AppColors.primary,
+                    color: isExpense ? AppColors.onSurface : AppColors.primary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -356,8 +348,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ],
             ),
             const SizedBox(width: 8),
-            Icon(Icons.chevron_right,
-                color: Colors.indigo.shade200, size: 24),
+            Icon(Icons.chevron_right, color: Colors.indigo.shade200, size: 24),
           ],
         ),
       ),
@@ -381,8 +372,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
           const SizedBox(height: 8),
           Text('Spending Insights',
-              style: AppTypography.headlineLarge
-                  .copyWith(fontSize: 26)),
+              style: AppTypography.headlineLarge.copyWith(fontSize: 26)),
           const SizedBox(height: 8),
           Text(
             _getInsightText(),
@@ -409,8 +399,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget _buildFooter() {
     return Column(
       children: [
-        Container(
-            height: 1, color: AppColors.outline),
+        Container(height: 1, color: AppColors.outline),
         const SizedBox(height: 24),
         Text(
           '© 2024 PayTalk Digital Ledger. All rights reserved.',
@@ -446,7 +435,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   String _getInsightText() {
     if (_transactions.isEmpty) return 'No transactions recorded yet.';
-    final expenses = _transactions.where((t) => t.type == TransactionType.expense);
+    final expenses =
+        _transactions.where((t) => t.type == TransactionType.expense);
     final totalSpent = expenses.fold<double>(0.0, (sum, t) => sum + t.amount);
     final income = _transactions.where((t) => t.type == TransactionType.income);
     final totalReceived = income.fold<double>(0.0, (sum, t) => sum + t.amount);
@@ -455,7 +445,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Widget _buildDynamicChart() {
     final recentTx = _transactions.take(7).toList();
-    final maxAmount = recentTx.map((t) => t.amount).reduce((a, b) => a > b ? a : b);
+    final maxAmount =
+        recentTx.map((t) => t.amount).reduce((a, b) => a > b ? a : b);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -487,8 +478,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         : isExpense
                             ? AppColors.primaryContainer
                             : AppColors.primary.withOpacity(0.3),
-                    borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(8)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(8)),
                     boxShadow: isMax
                         ? [
                             BoxShadow(
